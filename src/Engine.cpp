@@ -180,6 +180,14 @@ void Engine::PrepareUpdate()
 void Engine::FinishUpdate()
 {
     // L03: TODO 1: Cap the framerate of the gameloop
+    if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_F11) == KEY_DOWN) {
+        if (targetFrameRate == 60) {
+            targetFrameRate = 30;
+        } 
+        else{
+            targetFrameRate = 60;
+        }
+    }
     double currentDt = frameTime.ReadMs();
 	float maxFrameDuration = 1000.0f / targetFrameRate;
     if (targetFrameRate > 0 && currentDt < maxFrameDuration) {
