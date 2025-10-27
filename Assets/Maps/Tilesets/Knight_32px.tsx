@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.10" tiledversion="1.11.2" name="Knight" tilewidth="120" tileheight="80" tilecount="30" columns="10">
- <image source="Knight_Spritesheet.png" width="1200" height="240"/>
+<tileset version="1.10" tiledversion="1.11.2" name="Knight_32px" tilewidth="32" tileheight="32" tilecount="30" columns="10">
+ <image source="../../Textures/Knight_Spritesheet_32px.png" width="320" height="96"/>
  <tile id="0">
   <animation>
-   <frame tileid="0" duration="100"/>
-   <frame tileid="1" duration="100"/>
-   <frame tileid="2" duration="100"/>
-   <frame tileid="3" duration="100"/>
-   <frame tileid="4" duration="100"/>
-   <frame tileid="5" duration="100"/>
-   <frame tileid="6" duration="100"/>
-   <frame tileid="7" duration="100"/>
-   <frame tileid="8" duration="100"/>
-   <frame tileid="9" duration="100"/>
+   <frame tileid="0" duration="50"/>
+   <frame tileid="1" duration="50"/>
+   <frame tileid="2" duration="50"/>
+   <frame tileid="3" duration="50"/>
+   <frame tileid="4" duration="50"/>
+   <frame tileid="5" duration="50"/>
+   <frame tileid="6" duration="50"/>
+   <frame tileid="7" duration="50"/>
+   <frame tileid="8" duration="50"/>
+   <frame tileid="9" duration="50"/>
   </animation>
  </tile>
  <tile id="10">

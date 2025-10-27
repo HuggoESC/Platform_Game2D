@@ -29,12 +29,12 @@ bool Player::Awake() {
 bool Player::Start() {
 
 	// load
-	std::unordered_map<int, std::string> aliases = { {0,"idle"},{11,"move"},{22,"jump"} };
-	anims.LoadFromTSX("Assets/Textures/PLayer2_Spritesheet.tsx", aliases);
+	std::unordered_map<int, std::string> aliases = { {0,"idle"},{10,"move"},{20,"jump"} };
+	anims.LoadFromTSX("Assets/Textures/Knight_32px.tsx", aliases);
 	anims.SetCurrent("idle");
 
 	//L03: TODO 2: Initialize Player parameters
-	texture = Engine::GetInstance().textures->Load("Assets/Textures/player2_spritesheet.png");
+	texture = Engine::GetInstance().textures->Load("Assets/Textures/Knight_Spritesheet_32px.png");
 
 	// L08 TODO 5: Add physics to the player - initialize physics body
 	//Engine::GetInstance().textures->GetSize(texture, texW, texH);
