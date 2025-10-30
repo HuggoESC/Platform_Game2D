@@ -85,10 +85,15 @@ void Player::Move() {
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT) {
 		velocity.x = -speed;
 		anims.SetCurrent("move");
+		facingLeft = true;
 	}
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT) {
 		velocity.x = speed;
 		anims.SetCurrent("move");
+		facingLeft = false;
+	}
+	else {
+		anims.SetCurrent("idle");
 	}
 }
 

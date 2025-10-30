@@ -145,6 +145,7 @@ bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* sec
 		rect.h = th * scale;
 	}
 
+
 	const SDL_FRect* src = NULL;
 	SDL_FRect srcRect;
 	if (section != NULL)
@@ -164,6 +165,7 @@ bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* sec
 		pivot.y = (float)pivotY;
 		p = &pivot;
 	}
+
 
 	// SDL3: returns bool; map to int-style check
 	int rc = SDL_RenderTextureRotated(renderer, texture, src, &rect, angle, p, SDL_FLIP_NONE) ? 0 : -1;
