@@ -151,6 +151,12 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		isJumping = false;
 		anims.SetCurrent("idle");
 		break;
+	case ColliderType::TOPE:
+		LOG("Collision TOPE");
+		//reset the jump flag when touching the ground
+		isJumping = false;
+		anims.SetCurrent("idle");
+		break;
 	case ColliderType::ITEM:
 		LOG("Collision ITEM");
 		Engine::GetInstance().audio->PlayFx(pickCoinFxId);
