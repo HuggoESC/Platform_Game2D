@@ -58,10 +58,12 @@ bool Player::Update(float dt)
 {
 	GetPhysicsValues();
 	Move();
+	Dash();
 	Jump();
 	Teleport();
 	ApplyPhysics();
 	Draw(dt);
+	
 
 	return true;
 }
@@ -80,40 +82,84 @@ void Player::GetPhysicsValues() {
 }
 
 void Player::Move() {
-	
-	// Move left/right
-	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT) {
-		velocity.x = -speed;
-		anims.SetCurrent("move");
-		facingLeft = true;
-	}
-	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT) {
-		velocity.x = speed;
-		anims.SetCurrent("move");
-		facingLeft = false;
-	}
-	else {
-		anims.SetCurrent("idle");
-	}
+    // Не двигаемся если выполняется рывок
+    if (isDashing && !isDecelerating) return;
+    
+    // Move left/right
+    if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT) {
+        velocity.x = -speed;
+        anims.SetCurrent("move");
+        facingLeft = true;
+    }
+    else if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT) {
+        velocity.x = speed;
+        anims.SetCurrent("move");
+        facingLeft = false;
+    }
+    else {
+        anims.SetCurrent("idle");
+    }
 }
 
 void Player::Jump() {
-	// This function can be used for more complex jump logic if needed
-	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN && isJumping == false) {
-		Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, 0.0f, -jumpForce, true);
-		anims.SetCurrent("jump");
-		isJumping = true;
-	}
+    if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN && jumpCount < 2) {
+        // Сначала обнуляем вертикальную скорость
+        Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
+        
+        // Затем применяем импульс прыжка
+        Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, 0.0f, -jumpForce, true);
+        
+        anims.SetCurrent("jump");
+        isJumping = true;
+        jumpCount++;
+    }
+}
+void Player::Dash() {
+    if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_LSHIFT) == KEY_DOWN && !isDashing && canDash == true) {
+        isDashing = true;
+		canDash = false;
+        isDecelerating = false;
+        currentDashSpeed = 5.0f; // Начальная скорость рывка
+    }
 }
 
 void Player::ApplyPhysics() {
-	// Preserve vertical speed while jumping
-	if (isJumping == true) {
-		velocity.y = Engine::GetInstance().physics->GetYVelocity(pbody);
-	}
+    // Обработка рывка
+    if (isDashing) {
+        if (!isDecelerating) {
+            // Фаза ускорения
+            currentDashSpeed += dashAcceleration;
+            
+            // Когда достигаем максимальной скорости, начинаем замедление
+            if (currentDashSpeed >= maxDashSpeed) {
+                isDecelerating = true;
+                currentDashSpeed = maxDashSpeed;
+            }
+        }
+        else {
+            // Фаза замедления
+            currentDashSpeed -= dashDeceleration;
+            
+            // Завершение рывка
+            if (currentDashSpeed <= 0.0f) {
+                isDashing = false;
+                isDecelerating = false;
+                currentDashSpeed = 0.0f;
+            }
+        }
 
-	// Apply velocity via helper
-	Engine::GetInstance().physics->SetLinearVelocity(pbody, velocity);
+        // Применяем скорость рывка
+        float direction = facingLeft ? -1.0f : 1.0f;
+        velocity.x = currentDashSpeed * direction;
+        velocity.y = 0.0f; // Обнуляем вертикальную скорость во время рывка
+    }
+    // Обычная физика для прыжка
+    else if (isJumping) {
+        velocity.y = Engine::GetInstance().physics->GetYVelocity(pbody);
+    }
+
+    // Apply velocity via helper
+    Engine::GetInstance().physics->SetLinearVelocity(pbody, velocity);
 }
 
 void Player::Draw(float dt) {
@@ -154,12 +200,18 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		LOG("Collision PLATFORM");
 		//reset the jump flag when touching the ground
 		isJumping = false;
+		isDashing = false;
+		canDash = true;
+		jumpCount = 0;
 		anims.SetCurrent("idle");
 		break;
 	case ColliderType::TOPE:
 		LOG("Collision TOPE");
 		//reset the jump flag when touching the ground
 		isJumping = false;
+		isDashing = false;
+		canDash = true;
+		jumpCount = 0;
 		anims.SetCurrent("idle");
 		break;
 	case ColliderType::ITEM:

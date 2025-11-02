@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Entity.h"
 #include "Animation.h"
@@ -32,6 +32,7 @@ private:
 	void GetPhysicsValues();
 	void Move();
 	void Jump();
+	void Dash();
 	void Teleport();
 	void ApplyPhysics();
 	void Draw(float dt);
@@ -50,11 +51,20 @@ public:
 	// L08 TODO 5: Add physics to the player - declare a Physics body
 	PhysBody* pbody;
 	float jumpForce = 2.5f; // The force to apply when jumping
+	float dashForce = 50.0f; // The force to apply when dashing
+	int jumpCount = 0; // Counter to track the number of jumps
 	bool isJumping = false; // Flag to check if the player is currently jumping
+	bool isDashing = false; // Flag to check if the player is currently dashing
+	bool canDash = true; // Flag to check if the player can dash
 	bool facingLeft = false;
 
 private: 
 	b2Vec2 velocity;
 	AnimationSet anims;
 
+	float currentDashSpeed = 0.0f;    // Τекущая скорость рывка
+    float maxDashSpeed = 10.0f;       // Максимальная скорость рывка
+    float dashAcceleration = 2.0f;    // Ускорение рывка
+    float dashDeceleration = 1.0f;    // Замедление рывка (должно быть меньше ускорения)
+    bool isDecelerating = false;     // Флаг для отслеживания фазы замедления
 };
