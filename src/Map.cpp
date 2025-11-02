@@ -1,4 +1,3 @@
-
 #include "Engine.h"
 #include "Render.h"
 #include "Textures.h"
@@ -8,7 +7,7 @@
 
 #include <math.h>
 
-Map::Map() : Module(), mapLoaded(false)
+Map::Map() : Module(), mapLoaded(false), helpTexture(nullptr), showHelpTexture(false)
 {
     name = "map";
 }
@@ -28,12 +27,28 @@ bool Map::Awake()
 
 bool Map::Start() {
 
+    helpTexture = Engine::GetInstance().textures->Load("Assets/Textures/help.png"); 
+    showHelpTexture = false;
+    
+    float fw = 0, fh = 0;
+	if (SDL_GetTextureSize(helpTexture, &fw, &fh)) {
+		helpTextureRect.w = (int)fw;
+		helpTextureRect.h = (int)fh;
+		helpTextureRect.x = Engine::GetInstance().render->camera.w - (int)fw - 10; 
+		helpTextureRect.y = 10; 
+	}
+    
     return true;
 }
 
 bool Map::Update(float dt)
 {
     bool ret = true;
+
+
+    if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_H) == KEY_DOWN) {
+        showHelpTexture = !showHelpTexture;
+    }
 
     if (mapLoaded) {
 
@@ -65,6 +80,10 @@ bool Map::Update(float dt)
                 }
             }
         }
+
+        if (showHelpTexture && helpTexture != nullptr) {
+            Engine::GetInstance().render->DrawTexture(helpTexture, helpTextureRect.x, helpTextureRect.y);
+        }
     }
 
     return ret;
@@ -87,6 +106,12 @@ TileSet* Map::GetTilesetFromTileId(int gid) const
 bool Map::CleanUp()
 {
     LOG("Unloading map");
+
+
+    if (helpTexture != nullptr) {
+        Engine::GetInstance().textures->UnLoad(helpTexture);
+        helpTexture = nullptr;
+    }
 
     // L06: TODO 2: Make sure you clean up any memory allocated from tilesets/map
     for (const auto& tileset : mapData.tilesets) {
@@ -274,7 +299,4 @@ Vector2D Map::GetMapSizeInPixels()
     sizeInPixels.setY((float)(mapData.height * mapData.tileHeight));
     return sizeInPixels;
 }
-
-
-
 

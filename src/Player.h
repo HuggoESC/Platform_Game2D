@@ -57,14 +57,15 @@ public:
 	bool isDashing = false; // Flag to check if the player is currently dashing
 	bool canDash = true; // Flag to check if the player can dash
 	bool facingLeft = false;
+	bool GodMode = false; // Flag for God Mode
 
 private: 
 	b2Vec2 velocity;
 	AnimationSet anims;
 
-	float currentDashSpeed = 0.0f;    // Τекущая скорость рывка
-    float maxDashSpeed = 10.0f;       // Максимальная скорость рывка
-    float dashAcceleration = 2.0f;    // Ускорение рывка
-    float dashDeceleration = 1.0f;    // Замедление рывка (должно быть меньше ускорения)
-    bool isDecelerating = false;     // Флаг для отслеживания фазы замедления
+	float currentDashSpeed = 0.0f;    
+    float maxDashSpeed = 10.0f;       
+    float dashAcceleration = 2.0f;   
+    float dashDeceleration = 1.0f;   
+    bool isDecelerating = false;    
 };

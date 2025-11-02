@@ -143,4 +143,8 @@ private:
     bool mapLoaded;
     // L06: DONE 1: Declare a variable data of the struct MapData
     MapData mapData;
+
+    SDL_Texture* helpTexture;        // Текстура для PNG файла
+    bool showHelpTexture;            // Флаг для отображения/скрытия текстуры
+    SDL_Rect helpTextureRect;        // Прямоугольник для позиционирования текстуры
 };

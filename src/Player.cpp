@@ -55,14 +55,18 @@ bool Player::Start() {
 }
 
 bool Player::Update(float dt)
-{
-	GetPhysicsValues();
-	Move();
-	Dash();
-	Jump();
-	Teleport();
-	ApplyPhysics();
-	Draw(dt);
+{	
+		GetPhysicsValues();
+		Move();
+		Dash();
+		Jump();
+		Teleport();
+		ApplyPhysics();
+		Draw(dt);
+	
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_G) == KEY_DOWN) {
+		GodMode = !GodMode;
+	}
 	
 
 	return true;
@@ -82,7 +86,6 @@ void Player::GetPhysicsValues() {
 }
 
 void Player::Move() {
-    // Не двигаемся если выполняется рывок
     if (isDashing && !isDecelerating) return;
     
     // Move left/right
@@ -103,10 +106,8 @@ void Player::Move() {
 
 void Player::Jump() {
     if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN && jumpCount < 2) {
-        // Сначала обнуляем вертикальную скорость
         Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
         
-        // Затем применяем импульс прыжка
         Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, 0.0f, -jumpForce, true);
         
         anims.SetCurrent("jump");
@@ -119,28 +120,23 @@ void Player::Dash() {
         isDashing = true;
 		canDash = false;
         isDecelerating = false;
-        currentDashSpeed = 5.0f; // Начальная скорость рывка
+        currentDashSpeed = 5.0f; 
     }
 }
 
 void Player::ApplyPhysics() {
-    // Обработка рывка
     if (isDashing) {
         if (!isDecelerating) {
-            // Фаза ускорения
             currentDashSpeed += dashAcceleration;
             
-            // Когда достигаем максимальной скорости, начинаем замедление
             if (currentDashSpeed >= maxDashSpeed) {
                 isDecelerating = true;
                 currentDashSpeed = maxDashSpeed;
             }
         }
         else {
-            // Фаза замедления
             currentDashSpeed -= dashDeceleration;
             
-            // Завершение рывка
             if (currentDashSpeed <= 0.0f) {
                 isDashing = false;
                 isDecelerating = false;
@@ -148,12 +144,11 @@ void Player::ApplyPhysics() {
             }
         }
 
-        // Применяем скорость рывка
         float direction = facingLeft ? -1.0f : 1.0f;
         velocity.x = currentDashSpeed * direction;
-        velocity.y = 0.0f; // Обнуляем вертикальную скорость во время рывка
+        velocity.y = 0.0f;
     }
-    // Обычная физика для прыжка
+
     else if (isJumping) {
         velocity.y = Engine::GetInstance().physics->GetYVelocity(pbody);
     }
