@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="64" height="24" tilewidth="32" tileheight="32" infinite="0" nextlayerid="7" nextobjectid="2">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="64" height="24" tilewidth="32" tileheight="32" infinite="0" nextlayerid="11" nextobjectid="2">
  <tileset firstgid="1" name="Ground" tilewidth="32" tileheight="32" tilecount="165" columns="15">
   <image source="Tilesets/Ground.png" width="504" height="360"/>
  </tileset>
  <tileset firstgid="166" name="MapMetadata" tilewidth="32" tileheight="32" tilecount="2" columns="2">
   <image source="MapMetadata.png" width="67" height="34"/>
  </tileset>
- <tileset firstgid="168" name="background_layer_1" tilewidth="32" tileheight="32" tilecount="50" columns="10">
+ <tileset firstgid="168" name="background_layer_1" tilewidth="32" tileheight="32" tilecount="0" columns="10">
   <image source="../../../../../Downloads/Platform_Game2D-main/Platform_Game2D-main/Assets/Maps/oak_woods_v1.0/background/background_layer_1.png" width="320" height="180"/>
  </tileset>
  <layer id="1" name="Background" width="64" height="24">
@@ -2811,6 +2811,7 @@
    <tile/>
    <tile/>
    <tile/>
+   <tile gid="77"/>
    <tile/>
    <tile/>
    <tile/>
@@ -2825,8 +2826,7 @@
    <tile/>
    <tile/>
    <tile/>
-   <tile/>
-   <tile/>
+   <tile gid="77"/>
    <tile/>
    <tile/>
    <tile/>
@@ -2874,6 +2874,9 @@
    <tile/>
    <tile/>
    <tile/>
+   <tile gid="1"/>
+   <tile gid="83"/>
+   <tile gid="1"/>
    <tile/>
    <tile/>
    <tile/>
@@ -2886,12 +2889,9 @@
    <tile/>
    <tile/>
    <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
+   <tile gid="1"/>
+   <tile gid="83"/>
+   <tile gid="1"/>
    <tile/>
    <tile/>
    <tile/>
@@ -2937,6 +2937,11 @@
    <tile/>
    <tile/>
    <tile/>
+   <tile gid="2"/>
+   <tile gid="1"/>
+   <tile gid="83"/>
+   <tile gid="1"/>
+   <tile gid="3"/>
    <tile/>
    <tile/>
    <tile/>
@@ -2947,16 +2952,11 @@
    <tile/>
    <tile/>
    <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
+   <tile gid="2"/>
+   <tile gid="1"/>
+   <tile gid="83"/>
+   <tile gid="1"/>
+   <tile gid="3"/>
    <tile/>
    <tile/>
    <tile/>
@@ -3057,8 +3057,8 @@
    <tile gid="105"/>
    <tile gid="105"/>
    <tile gid="105"/>
-   <tile gid="77"/>
-   <tile gid="77"/>
+   <tile/>
+   <tile/>
    <tile gid="105"/>
    <tile gid="105"/>
    <tile gid="105"/>
@@ -5901,6 +5901,7 @@
    <tile/>
    <tile/>
    <tile/>
+   <tile gid="166"/>
    <tile/>
    <tile/>
    <tile/>
@@ -5915,8 +5916,7 @@
    <tile/>
    <tile/>
    <tile/>
-   <tile/>
-   <tile/>
+   <tile gid="166"/>
    <tile/>
    <tile/>
    <tile/>
@@ -5964,6 +5964,9 @@
    <tile/>
    <tile/>
    <tile/>
+   <tile gid="166"/>
+   <tile/>
+   <tile gid="166"/>
    <tile/>
    <tile/>
    <tile/>
@@ -5976,12 +5979,9 @@
    <tile/>
    <tile/>
    <tile/>
+   <tile gid="166"/>
    <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
+   <tile gid="166"/>
    <tile/>
    <tile/>
    <tile/>
@@ -6027,6 +6027,11 @@
    <tile/>
    <tile/>
    <tile/>
+   <tile gid="166"/>
+   <tile/>
+   <tile/>
+   <tile/>
+   <tile gid="166"/>
    <tile/>
    <tile/>
    <tile/>
@@ -6037,16 +6042,11 @@
    <tile/>
    <tile/>
    <tile/>
+   <tile gid="166"/>
    <tile/>
    <tile/>
    <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
+   <tile gid="166"/>
    <tile/>
    <tile/>
    <tile/>
