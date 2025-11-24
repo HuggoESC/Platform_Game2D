@@ -118,24 +118,25 @@ void Render::ResetViewPort()
 }
 
 // Blit to screen
+
+// Blit to screen (VERSIÓN ORIGINAL SIN flipX)
 bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* section, float speed, double angle, int pivotX, int pivotY) const
 {
 	bool ret = true;
 	int scale = Engine::GetInstance().window->GetScale();
 
-	// SDL3 uses float rects for rendering
 	SDL_FRect rect;
 	rect.x = (float)((int)(camera.x * speed) + x * scale);
 	rect.y = (float)((int)(camera.y * speed) + y * scale);
 
-	if (section != NULL)
+	if (section != nullptr)
 	{
 		rect.w = (float)(section->w * scale);
 		rect.h = (float)(section->h * scale);
 	}
 	else
 	{
-		float tw = 0.0f, th = 0.0f;
+		float tw, th;
 		if (!SDL_GetTextureSize(texture, &tw, &th))
 		{
 			LOG("SDL_GetTextureSize failed: %s", SDL_GetError());
@@ -145,10 +146,9 @@ bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* sec
 		rect.h = th * scale;
 	}
 
-
-	const SDL_FRect* src = NULL;
+	const SDL_FRect* src = nullptr;
 	SDL_FRect srcRect;
-	if (section != NULL)
+	if (section != nullptr)
 	{
 		srcRect.x = (float)section->x;
 		srcRect.y = (float)section->y;
@@ -157,7 +157,7 @@ bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* sec
 		src = &srcRect;
 	}
 
-	SDL_FPoint* p = NULL;
+	SDL_FPoint* p = nullptr;
 	SDL_FPoint pivot;
 	if (pivotX != INT_MAX && pivotY != INT_MAX)
 	{
@@ -166,8 +166,7 @@ bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* sec
 		p = &pivot;
 	}
 
-
-	// SDL3: returns bool; map to int-style check
+	// SDL3: sin flip
 	int rc = SDL_RenderTextureRotated(renderer, texture, src, &rect, angle, p, SDL_FLIP_NONE) ? 0 : -1;
 	if (rc != 0)
 	{
@@ -177,6 +176,66 @@ bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* sec
 
 	return ret;
 }
+
+bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* section,
+	float speed, double angle, int pivotX, int pivotY, bool flipX) const
+{
+	bool ret = true;
+	int scale = Engine::GetInstance().window->GetScale();
+
+	SDL_FRect rect;
+	rect.x = (float)((int)(camera.x * speed) + x * scale);
+	rect.y = (float)((int)(camera.y * speed) + y * scale);
+
+	if (section != nullptr)
+	{
+		rect.w = (float)(section->w * scale);
+		rect.h = (float)(section->h * scale);
+	}
+	else
+	{
+		float tw, th;
+		if (!SDL_GetTextureSize(texture, &tw, &th))
+		{
+			LOG("SDL_GetTextureSize failed: %s", SDL_GetError());
+			return false;
+		}
+		rect.w = tw * scale;
+		rect.h = th * scale;
+	}
+
+	const SDL_FRect* src = nullptr;
+	SDL_FRect srcRect;
+	if (section != nullptr)
+	{
+		srcRect.x = (float)section->x;
+		srcRect.y = (float)section->y;
+		srcRect.w = (float)section->w;
+		srcRect.h = (float)section->h;
+		src = &srcRect;
+	}
+
+	SDL_FPoint* p = nullptr;
+	SDL_FPoint pivot;
+	if (pivotX != INT_MAX && pivotY != INT_MAX)
+	{
+		pivot.x = (float)pivotX;
+		pivot.y = (float)pivotY;
+		p = &pivot;
+	}
+
+	SDL_FlipMode flip = flipX ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
+
+	int rc = SDL_RenderTextureRotated(renderer, texture, src, &rect, angle, p, flip) ? 0 : -1;
+	if (rc != 0)
+	{
+		LOG("Cannot blit to screen. SDL_RenderTextureRotated error: %s", SDL_GetError());
+		ret = false;
+	}
+
+	return ret;
+}
+
 
 bool Render::DrawRectangle(const SDL_Rect& rect, Uint8 r, Uint8 g, Uint8 b, Uint8 a, bool filled, bool use_camera) const
 {

@@ -23,6 +23,7 @@ bool Player::Awake() {
 
 	//L03: TODO 2: Initialize Player parameters
 	position = Vector2D(96, 96);
+	spawnPosition = position;
 	return true;
 }
 
@@ -63,6 +64,39 @@ bool Player::Update(float dt)
 		Teleport();
 		ApplyPhysics();
 		Draw(dt);
+
+	//Muerte por caída (no afecta en GodMode)
+	if (!GodMode)
+	{
+		Vector2D mapSize = Engine::GetInstance().map->GetMapSizeInPixels();
+		// Si cae muy por debajo del mapa = muerto
+		float deathY = mapSize.getY() + 100.0f;
+
+		if (position.getY() > deathY)
+		{
+				LOG("Player died. Respawning...");
+
+				// Reset velocidad física
+				Engine::GetInstance().physics->SetLinearVelocity(pbody, { 0.0f, 0.0f });
+
+				// Teletransportar al spawn
+				pbody->SetPosition((int)spawnPosition.getX(), (int)spawnPosition.getY());
+
+				// Actualizar valores internos de posición
+				position = spawnPosition;
+
+				// Reposicionar cámara para centrar al jugador tras el respawn
+				Engine::GetInstance().render->camera.x = -position.getX() + Engine::GetInstance().render->camera.w / 4;
+				Engine::GetInstance().render->camera.y = -position.getY() + Engine::GetInstance().render->camera.h / 4;
+
+				// Reset estado
+				anims.SetCurrent("idle");
+				isJumping = false;
+				isDashing = false;
+				canDash = true;
+				jumpCount = 0;
+		}
+	}
 	
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_G) == KEY_DOWN) {
 		GodMode = !GodMode;
@@ -162,13 +196,11 @@ void Player::Draw(float dt) {
 	anims.Update(dt);
 	const SDL_Rect& animFrame = anims.GetCurrentFrame();
 
-	// Update render position using your PhysBody helper
 	int x, y;
 	pbody->GetPosition(x, y);
 	position.setX((float)x);
 	position.setY((float)y);
 
-	//L10: TODO 7: Center the camera on the player
 	Vector2D mapSize = Engine::GetInstance().map->GetMapSizeInPixels();
 	float limitLeft = Engine::GetInstance().render->camera.w / 4;
 	float limitRight = mapSize.getX() - Engine::GetInstance().render->camera.w * 3 / 4;
@@ -176,8 +208,19 @@ void Player::Draw(float dt) {
 		Engine::GetInstance().render->camera.x = -position.getX() + Engine::GetInstance().render->camera.w / 4;
 	}
 
-	// L10: TODO 5: Draw the player using the texture and the current animation frame
-	Engine::GetInstance().render->DrawTexture(texture, x - texW / 2, y - texH / 2, &animFrame);
+	SDL_Rect frame = animFrame;
+
+	Engine::GetInstance().render->DrawTexture(
+		texture,
+		x - texW / 2,
+		y - texH / 2,
+		&animFrame,
+		1.0f,
+		0.0,
+		0,
+		0,
+		facingLeft
+	);
 }
 
 bool Player::CleanUp()

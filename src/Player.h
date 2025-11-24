@@ -29,6 +29,7 @@ public:
 
 private:
 
+	Vector2D spawnPosition;
 	void GetPhysicsValues();
 	void Move();
 	void Jump();
