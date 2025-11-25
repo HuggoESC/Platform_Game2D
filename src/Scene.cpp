@@ -11,6 +11,7 @@
 #include "Player.h"
 #include "Map.h"
 #include "Item.h"
+#include "Enemy.h"
 
 Scene::Scene() : Module()
 {
@@ -40,6 +41,9 @@ bool Scene::Awake()
 // Called before the first frame
 bool Scene::Start()
 {
+
+	auto slime = std::make_shared<Enemy>(200, 200); // posición provisional
+	Engine::GetInstance().entityManager->AddEntity(slime);
 
 	Engine::GetInstance().audio->PlayMusic("Assets/Audio/Music/level-iv-339695.wav");
 
