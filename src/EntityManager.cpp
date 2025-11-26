@@ -93,6 +93,7 @@ void EntityManager::DestroyEntity(std::shared_ptr<Entity> entity)
 void EntityManager::AddEntity(std::shared_ptr<Entity> entity)
 {
 	if ( entity != nullptr) entities.push_back(entity);
+
 }
 
 bool EntityManager::Update(float dt)

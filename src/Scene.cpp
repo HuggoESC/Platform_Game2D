@@ -41,8 +41,7 @@ bool Scene::Awake()
 // Called before the first frame
 bool Scene::Start()
 {
-
-	auto slime = std::make_shared<Enemy>(200, 200); // posición provisional
+	auto slime = std::make_shared<Enemy>(1500, 680); // posición provisional
 	Engine::GetInstance().entityManager->AddEntity(slime);
 
 	Engine::GetInstance().audio->PlayMusic("Assets/Audio/Music/level-iv-339695.wav");

@@ -11,10 +11,10 @@ Enemy::Enemy(int x, int y)
     position.setX((float)x);
     position.setY((float)y);
 
-    texture = Engine::GetInstance().textures->Load("textures/slime.png");
+    texture = Engine::GetInstance().textures->Load("Assets/Textures/slime.png");
 
     bool ok = animations.LoadFromTSX(
-        "textures/slime.tsx",
+        "Assets/Textures/slime.tsx",
         {
             {28, "idle"}  // anim default
         }
@@ -32,6 +32,9 @@ Enemy::~Enemy()
 
 bool Enemy::Update(float dt)
 {
+
+    LOG("Enemy update, pos = (%f, %f)", position.getX(), position.getY());
+
     // update animación
     animations.Update(dt);
 
