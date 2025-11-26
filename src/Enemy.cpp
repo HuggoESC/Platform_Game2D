@@ -29,6 +29,18 @@ Enemy::Enemy(int x, int y)
         pbody = Engine::GetInstance().physics->CreateCircle(x, y, 14, DYNAMIC);
         pbody->listener = this;
         b2Body_SetFixedRotation(pbody->body, true);   // Para que no rote al colisionar
+
+        // sensores
+        sensorFront = Engine::GetInstance().physics->CreateCircle(x + sensorOffset, y, 6, DYNAMIC);
+        sensorFront->listener = this;
+        b2Body_SetFixedRotation(pbody->body, true);
+
+        // sensores
+        sensorFront = Engine::GetInstance().physics->CreateCircle(x + (int)sensorOffset, y, 6, DYNAMIC);
+        sensorFront->listener = this;
+
+        sensorBack = Engine::GetInstance().physics->CreateCircle(x - (int)sensorOffset, y, 6, DYNAMIC);
+        sensorBack->listener = this;
     
 }
 
@@ -38,20 +50,26 @@ Enemy::~Enemy()
 
 bool Enemy::Update(float dt)
 {
-    // 1) Actualizar animación
+    // Actualizar animación
     animations.Update(dt);
 
-    // 2) Sincronizar posición visual con el cuerpo Box2D
+    // Sincronizar posición visual con el cuerpo Box2D
     int px, py;
     pbody->GetPosition(px, py);
     position.setX((float)px);
     position.setY((float)py);
 
-    // 3) Movimiento simple DENTRO de Box2D (100% estable)
+	if (sensorFront && sensorBack) // sinconizar sensores
+    {
+        sensorFront->SetPosition(px + sensorOffset * direction, py);
+        sensorBack->SetPosition(px - sensorOffset * direction, py);
+    }
+
+    // Movimiento simple DENTRO de Box2D (100% estable)
     float velX = direction * speed;         // velocidad horizontal
     Engine::GetInstance().physics->SetXVelocity(pbody, velX);
 
-    // 4) Dibujar en pantalla
+    // Dibujar en pantalla
     SDL_Rect frame = animations.GetCurrentFrame();
     Engine::GetInstance().render->DrawTexture(
         texture,
@@ -65,5 +83,17 @@ bool Enemy::Update(float dt)
 
 void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
 {
-	direction *= -1;
+    // Si el que colisiona es el sensor forward ? girar
+    if (physA == sensorFront && physB->ctype == ColliderType::PLATFORM) 
+    {
+        direction = -1; // Girar a la izquierda
+       
+    }
+
+    // Si colisiona el sensor trasero ? girar al otro lado
+    if (physA == sensorBack && physB->ctype == ColliderType::PLATFORM) 
+    {
+        direction = 1; // Girar a la derecha
+     
+    }
 }
