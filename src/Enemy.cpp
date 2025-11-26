@@ -13,35 +13,31 @@
 
 Enemy::Enemy(int x, int y)
 {
-    
-        type = EntityType::ENEMY;
+    type = EntityType::ENEMY;
 
-        // Posición inicial
-        position.setX((float)x);
-        position.setY((float)y);
+    // Posición inicial
+    position.setX((float)x);
+    position.setY((float)y);
 
-        // Textura y animaciones
-        texture = Engine::GetInstance().textures->Load("Assets/Textures/slime.png");
-        animations.LoadFromTSX("Assets/Textures/slime.tsx", { {0,"idle"}, {4,"walkL"}, {14,"jump"}, {28,"walkR"}, {38,"dead"} });
-        animations.SetCurrent("idle");
+    // Textura y animaciones
+    texture = Engine::GetInstance().textures->Load("Assets/Textures/slime.png");
+    animations.LoadFromTSX("Assets/Textures/slime.tsx",
+        { {0,"idle"}, {4,"walkL"}, {14,"jump"}, {28,"walkR"}, {38,"dead"} });
+    animations.SetCurrent("walkR"); // de momento hacia la derecha
 
-		// Cuerpo físico
-        pbody = Engine::GetInstance().physics->CreateCircle(x, y, 14, DYNAMIC);
-        pbody->listener = this;
-        b2Body_SetFixedRotation(pbody->body, true);   // Para que no rote al colisionar
+    //  Cuerpo físico principal 
+    pbody = Engine::GetInstance().physics->CreateCircle(x, y, 14, DYNAMIC);
+    pbody->listener = this;
+    b2Body_SetFixedRotation(pbody->body, true);
 
-        // sensores
-        sensorFront = Engine::GetInstance().physics->CreateCircle(x + sensorOffset, y, 6, DYNAMIC);
-        sensorFront->listener = this;
-        b2Body_SetFixedRotation(pbody->body, true);
+    // Sensores: pequeños y algo elevados para no tocar el suelo 
+    int sensorRadius = 4;
+    int sensorY = y - 10;                    // 10 píxeles por encima del centro
+    sensorFront = Engine::GetInstance().physics->CreateCircle(x + (int)sensorOffset, sensorY, sensorRadius, DYNAMIC);
+    sensorFront->listener = this;
 
-        // sensores
-        sensorFront = Engine::GetInstance().physics->CreateCircle(x + (int)sensorOffset, y, 6, DYNAMIC);
-        sensorFront->listener = this;
-
-        sensorBack = Engine::GetInstance().physics->CreateCircle(x - (int)sensorOffset, y, 6, DYNAMIC);
-        sensorBack->listener = this;
-    
+    sensorBack = Engine::GetInstance().physics->CreateCircle(x - (int)sensorOffset, sensorY, sensorRadius, DYNAMIC);
+    sensorBack->listener = this;
 }
 
 Enemy::~Enemy()
@@ -61,8 +57,8 @@ bool Enemy::Update(float dt)
 
 	if (sensorFront && sensorBack) // sinconizar sensores
     {
-        sensorFront->SetPosition(px + sensorOffset * direction, py);
-        sensorBack->SetPosition(px - sensorOffset * direction, py);
+        sensorFront->SetPosition(px + (int)(sensorOffset * direction), py-10);
+        sensorBack->SetPosition(px - (int)(sensorOffset * direction), py-10);
     }
 
     // Movimiento simple DENTRO de Box2D (100% estable)
@@ -83,17 +79,37 @@ bool Enemy::Update(float dt)
 
 void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
 {
-    // Si el que colisiona es el sensor forward ? girar
-    if (physA == sensorFront && physB->ctype == ColliderType::PLATFORM) 
-    {
-        direction = -1; // Girar a la izquierda
-       
-    }
+    // Solo nos interesan colisiones con el suelo/plataformas
+    if (physB->ctype != ColliderType::PLATFORM && physB->ctype != ColliderType::TOPE)
+        return;
 
-    // Si colisiona el sensor trasero ? girar al otro lado
-    if (physA == sensorBack && physB->ctype == ColliderType::PLATFORM) 
+    // Posición del slime (cuerpo principal)
+    int ex, ey;
+    pbody->GetPosition(ex, ey);
+
+    // Posición del objeto con el que hemos chocado
+    int ox, oy;
+    physB->GetPosition(ox, oy);
+
+    int diffX = ox - ex;
+    int diffY = oy - ey;
+
+    // Colisión lateral: la diferencia en X es mayor que en Y
+    bool lateral = abs(diffX) > abs(diffY);
+
+    if (!lateral)
+        return; // probablemente suelo ? ignoramos
+
+    // Si el que choca es el sensor frontal ? giramos hacia el lado contrario
+    if (physA == sensorFront)
     {
-        direction = 1; // Girar a la derecha
-     
+        direction = -1;          // ir hacia la izquierda
+        animations.SetCurrent("walkL");
+    }
+    // Si el que choca es el sensor trasero ? giramos hacia la derecha
+    else if (physA == sensorBack)
+    {
+        direction = 1;           // ir hacia la derecha
+        animations.SetCurrent("walkR");
     }
 }
