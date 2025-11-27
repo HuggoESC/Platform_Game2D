@@ -86,8 +86,8 @@ bool Player::Update(float dt)
 				position = spawnPosition;
 
 				// Reposicionar cámara para centrar al jugador tras el respawn
-				Engine::GetInstance().render->camera.x = -position.getX() + Engine::GetInstance().render->camera.w / 4;
-				Engine::GetInstance().render->camera.y = -position.getY() + Engine::GetInstance().render->camera.h / 4;
+				Engine::GetInstance().render->camera.x = -position.getX() + Engine::GetInstance().render->camera.w / 14;
+				Engine::GetInstance().render->camera.y = -position.getY() + Engine::GetInstance().render->camera.h * 9 / 10;
 
 				// Reset estado
 				anims.SetCurrent("idle");
