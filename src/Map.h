@@ -75,7 +75,14 @@ struct TileSet
     SDL_Rect GetRect(unsigned int gid) {
         SDL_Rect rect = { 0 };
 
+        // 
+        // Protecciуn: si los datos del tileset no son vбlidos, no dibujamos nada
+        if (columns == 0 || tileWidth == 0 || tileHeight == 0) {
+            return rect;   // rect lleno de ceros ? no se verб nada, pero NO peta
+        }
+
         int relativeIndex = gid - firstGid;
+
         rect.w = tileWidth;
         rect.h = tileHeight;
         rect.x = margin + (tileWidth + spacing) * (relativeIndex % columns);
@@ -144,7 +151,7 @@ private:
     // L06: DONE 1: Declare a variable data of the struct MapData
     MapData mapData;
 
-    SDL_Texture* helpTexture;        // Текстура для PNG файла
-    bool showHelpTexture;            // Флаг для отображения/скрытия текстуры
-    SDL_Rect helpTextureRect;        // Прямоугольник для позиционирования текстуры
+    SDL_Texture* helpTexture;        
+    bool showHelpTexture;            
+    SDL_Rect helpTextureRect;        
 };

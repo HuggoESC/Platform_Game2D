@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="64" height="24" tilewidth="32" tileheight="32" infinite="0" nextlayerid="14" nextobjectid="4">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="64" height="24" tilewidth="32" tileheight="32" infinite="0" nextlayerid="15" nextobjectid="4">
  <tileset firstgid="1" name="Ground" tilewidth="32" tileheight="32" tilecount="165" columns="15">
   <image source="Tilesets/Ground.png" width="504" height="360"/>
  </tileset>
  <tileset firstgid="166" source="MapMetadata.tsx"/>
  <tileset firstgid="172" source="Fondo.tsx"/>
- <layer id="4" name="Foreground" width="64" height="24" visible="0">
+ <layer id="4" name="Foreground" width="64" height="24">
   <properties>
    <property name="Draw" type="bool" value="true"/>
   </properties>
@@ -3098,6 +3098,9 @@
    <tile/>
   </data>
  </layer>
+ <imagelayer id="14" name="Capa de Imagen 1">
+  <image source="oak_woods_v1.0/background/background_layer_1.png" width="320" height="180"/>
+ </imagelayer>
  <layer id="2" name="Platforms" width="64" height="24">
   <properties>
    <property name="Draw" type="bool" value="true"/>
@@ -6181,7 +6184,7 @@
    <tile gid="166"/>
   </data>
  </layer>
- <layer id="12" name="Things" width="64" height="24">
+ <layer id="12" name="Things" width="64" height="24" offsetx="1.33333" offsety="0">
   <data>
    <tile/>
    <tile/>
@@ -7563,6 +7566,11 @@
    <tile/>
    <tile/>
    <tile/>
+   <tile gid="168"/>
+   <tile/>
+   <tile/>
+   <tile/>
+   <tile gid="168"/>
    <tile/>
    <tile/>
    <tile/>
@@ -7573,16 +7581,11 @@
    <tile/>
    <tile/>
    <tile/>
+   <tile gid="168"/>
    <tile/>
    <tile/>
    <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
-   <tile/>
+   <tile gid="168"/>
    <tile/>
    <tile/>
    <tile/>
