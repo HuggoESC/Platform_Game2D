@@ -214,13 +214,23 @@ bool Map::Load(std::string path, std::string fileName)
                         int gid = mapLayer->Get(i, j);
                         if (gid == 166) {
                             Vector2D mapCoord = MapToWorld(i, j);
-                            PhysBody* c1 = Engine::GetInstance().physics.get()->CreateRectangle(mapCoord.getX()+ mapData.tileWidth/2, mapCoord.getY()+ mapData.tileHeight/2, mapData.tileWidth, mapData.tileHeight, STATIC);
-                            c1->ctype = ColliderType::PLATFORM;
+                            PhysBody* c = Engine::GetInstance().physics->CreateRectangle(
+                                mapCoord.getX() + mapData.tileWidth / 2,
+                                mapCoord.getY() + mapData.tileHeight / 2,
+                                mapData.tileWidth, mapData.tileHeight,
+                                STATIC
+                            );
+                            c->ctype = ColliderType::PLATFORM;
                         }
                         if (gid == 167) {
                             Vector2D mapCoord = MapToWorld(i, j);
-                            PhysBody* c1 = Engine::GetInstance().physics.get()->CreateRectangle(mapCoord.getX() + mapData.tileWidth / 2, mapCoord.getY() + mapData.tileHeight / 2, mapData.tileWidth, mapData.tileHeight, STATIC);
-                            c1->ctype = ColliderType::TOPE;
+                            PhysBody* c = Engine::GetInstance().physics->CreateRectangle(
+                                mapCoord.getX() + mapData.tileWidth / 2,
+                                mapCoord.getY() + mapData.tileHeight / 2,
+                                mapData.tileWidth, mapData.tileHeight,
+                                STATIC
+                            );
+                            c->ctype = ColliderType::WALL;
                         }
                     }
                 }
