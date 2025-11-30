@@ -4,7 +4,9 @@
   <image source="Tilesets/Ground.png" width="504" height="360"/>
  </tileset>
  <tileset firstgid="166" source="MapMetadata.tsx"/>
- <tileset firstgid="172" source="Fondo.tsx"/>
+ <tileset firstgid="172" name="Fondo" tilewidth="32" tileheight="32" tilecount="50" columns="10">
+  <image source="oak_woods_v1.0/background/background_layer_1.png" width="320" height="180"/>
+ </tileset>
  <layer id="4" name="Foreground" width="64" height="24">
   <properties>
    <property name="Draw" type="bool" value="true"/>
@@ -1554,10 +1556,9 @@
   </properties>
   <object id="1" name="Player" type="player" x="64" y="641.333" width="32" height="32"/>
  </objectgroup>
- <objectgroup id="11" name="enemies">
+ <objectgroup id="11" name="Entities">
   <object id="3" name="Slime" type="Enemy" x="1470.67" y="670.667" width="32" height="32"/>
  </objectgroup>
- <objectgroup id="6" name="Entities"/>
  <layer id="13" name="Fondo" width="64" height="24">
   <data>
    <tile/>
@@ -3098,9 +3099,6 @@
    <tile/>
   </data>
  </layer>
- <imagelayer id="14" name="Capa de Imagen 1">
-  <image source="oak_woods_v1.0/background/background_layer_1.png" width="320" height="180"/>
- </imagelayer>
  <layer id="2" name="Platforms" width="64" height="24">
   <properties>
    <property name="Draw" type="bool" value="true"/>
