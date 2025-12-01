@@ -4,6 +4,8 @@
 #include "Map.h"
 #include "Log.h"
 #include "Physics.h"
+#include "EntityManager.h"
+#include "Enemy.h"
 
 #include <math.h>
 
@@ -237,6 +239,40 @@ bool Map::Load(std::string path, std::string fileName)
                                 STATIC
                             );
                             c->ctype = ColliderType::WALL;
+                        }
+                    }
+                }
+            }
+        }
+
+        for (pugi::xml_node objGroup = mapFileXML.child("map").child("objectgroup");
+            objGroup;
+            objGroup = objGroup.next_sibling("objectgroup"))
+        {
+            std::string layerName = objGroup.attribute("name").as_string();
+
+            if (layerName == "Entities")   // nombre de la capa de objetos en Tiled
+            {
+                for (pugi::xml_node object = objGroup.child("object");
+                    object;
+                    object = object.next_sibling("object"))
+                {
+                    std::string type = object.attribute("type").as_string(); // campo Type en Tiled
+                    float x = object.attribute("x").as_float();
+                    float y = object.attribute("y").as_float();
+
+                    // De momento solo Slime, luego podremos añadir más tipos
+                    if (type == "Slime")
+                    {
+                        auto e = Engine::GetInstance().entityManager->CreateEntity(EntityType::ENEMY);
+                        if (e)
+                        {
+                            // Convertimos el std::shared_ptr<Entity> en Enemy
+                            std::shared_ptr<Enemy> slime = std::dynamic_pointer_cast<Enemy>(e);
+                            if (slime)
+                            {
+                                slime->SetPosition((int)x, (int)y);
+                            }
                         }
                     }
                 }

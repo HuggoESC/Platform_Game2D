@@ -5,6 +5,7 @@
 #include "Scene.h"
 #include "Log.h"
 #include "Item.h"
+#include "Enemy.h"
 
 EntityManager::EntityManager() : Module()
 {
@@ -64,7 +65,7 @@ bool EntityManager::CleanUp()
 
 std::shared_ptr<Entity> EntityManager::CreateEntity(EntityType type)
 {
-	std::shared_ptr<Entity> entity = std::make_shared<Entity>();
+	std::shared_ptr<Entity> entity = nullptr;
 
 	//L04: TODO 3a: Instantiate entity according to the type and add the new entity to the list of Entities
 	switch (type)
@@ -75,10 +76,14 @@ std::shared_ptr<Entity> EntityManager::CreateEntity(EntityType type)
 	case EntityType::ITEM:
 		entity = std::make_shared<Item>();
 		break;
+	case EntityType::ENEMY:
+		entity = std::make_shared<Enemy>(0, 0);
+		break;
 	default:
 		break;
 	}
 
+	if (entity != nullptr)
 	entities.push_back(entity);
 
 	return entity;

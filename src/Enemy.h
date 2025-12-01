@@ -15,6 +15,15 @@ public:
 	bool Update(float dt) override; // dt en milisegundos
 	void OnCollision(PhysBody* physA, PhysBody* physB) override; // dt en milisegundos
 
+	void SetPosition(int x, int y)
+	{
+		position.setX(x);
+		position.setY(y);
+
+		if (pbody != nullptr)
+			pbody->SetPosition((float)x, (float)y);
+	}
+
 private:
 	AnimationSet animations;		// Conjunto de animaciones del enemigo
 	SDL_Texture* texture = nullptr; // Textura del enemigo

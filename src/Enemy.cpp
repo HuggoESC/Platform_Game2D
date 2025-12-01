@@ -15,33 +15,15 @@ Enemy::Enemy(int x, int y)
 {
     type = EntityType::ENEMY;
 
-    // Posición inicial
-    position.setX((float)x);
-    position.setY((float)y);
-
-    // Textura y animaciones
     texture = Engine::GetInstance().textures->Load("Assets/Textures/slime.png");
     animations.LoadFromTSX("Assets/Textures/slime.tsx",
         { {0,"idle"}, {4,"walkL"}, {14,"jump"}, {28,"walkR"}, {38,"dead"} });
-    animations.SetCurrent("walkR"); // de momento hacia la derecha
+    animations.SetCurrent("walkR");
 
-    //  Cuerpo físico principal 
+    // No usamos x,y todavía ? lo colocaremos con SetPosition()
     pbody = Engine::GetInstance().physics->CreateCircle(x, y, 14, DYNAMIC);
     pbody->listener = this;
     b2Body_SetFixedRotation(pbody->body, true);
-
-    // Sensores: pequeños y algo elevados para no tocar el suelo 
-    int sensorRadius = 4;
-    int sensorY = y - 10;                    // 10 píxeles por encima del centro
-    sensorFront = Engine::GetInstance().physics->CreateRectangleSensor(
-        x + (int)sensorOffset, y - 10, 6, 6, STATIC); // pequeño y no participa en físicas
-    sensorFront->listener = this;
-    sensorFront->ctype = ColliderType::SENSOR;
-
-    sensorBack = Engine::GetInstance().physics->CreateRectangleSensor(
-        x - (int)sensorOffset, y - 10, 6, 6, STATIC);
-    sensorBack->listener = this;
-    sensorBack->ctype = ColliderType::SENSOR;
 }
 
 Enemy::~Enemy()
