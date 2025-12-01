@@ -180,6 +180,10 @@ bool Map::Load(std::string path, std::string fileName)
             tileSet->tileCount = tilesetNode.attribute("tilecount").as_int();
             tileSet->columns = tilesetNode.attribute("columns").as_int();
 
+			// Nos dice exacto qué tileset se ha cargado (PRUEBA)
+            LOG("Tileset cargado: %s  firstgid=%d  tileCount=%d columns=%d",
+                tileSet->name.c_str(), tileSet->firstGid, tileSet->tileCount, tileSet->columns);
+
 			//Load the tileset image
 			std::string imgName = tilesetNode.child("image").attribute("source").as_string();
             tileSet->texture = Engine::GetInstance().textures->Load((mapPath+imgName).c_str());
@@ -216,28 +220,35 @@ bool Map::Load(std::string path, std::string fileName)
 
         //Iterate the layer and create colliders
       // === COLISIONES DEL MAPA ===
+       // === COLISIONES DEL MAPA ===
         for (const auto& mapLayer : mapData.layers)
         {
-            // === COLLISIONS REAL ===
-            if (mapLayer->name == "Collisions") {
-
-                for (int i = 0; i < mapData.height; i++) {
-                    for (int j = 0; j < mapData.width; j++) {
-
+            if (mapLayer->name == "Collisions")
+            {
+                for (int i = 0; i < mapData.height; i++)
+                {
+                    for (int j = 0; j < mapData.width; j++)
+                    {
                         int gid = mapLayer->Get(i, j);
-                        if (gid == 0) continue;  
+                        if (gid == 0) continue;
 
-                        Vector2D mapCoord = MapToWorld(i, j);
+                        Vector2D pos = MapToWorld(i, j);
+
+                        // --- Creamos collider físico ---
                         PhysBody* c = Engine::GetInstance().physics->CreateRectangle(
-                            mapCoord.getX() + mapData.tileWidth / 2,
-                            mapCoord.getY() + mapData.tileHeight / 2,
+                            pos.getX() + mapData.tileWidth / 2,
+                            pos.getY() + mapData.tileHeight / 2,
                             mapData.tileWidth, mapData.tileHeight,
-                            STATIC
-                        );
+                            STATIC);
 
-                        if (gid == 1) c->ctype = ColliderType::WALL;      
-                        if (gid == 2) c->ctype = ColliderType::WALL;       
-                        if (gid >= 3) c->ctype = ColliderType::PLATFORM;  
+                        // ---- METADATA INDEX ----
+                        TileSet* metaTS = mapData.tilesets.back();   // MapMetadata es el último tileset
+                        int meta = gid - metaTS->firstGid;           // ? Indice 0/1/2 correcto
+
+                        // ---- ASIGNACIÓN FINAL ----
+                        if (meta == 0) c->ctype = ColliderType::PLATFORM;  // ?? Suelo
+                        if (meta == 2) c->ctype = ColliderType::WALL;      // ?? Bloque elevado (slime gira)
+                        if (meta == 1) c->ctype = ColliderType::TOPE;      // ?? Límite de mapa
                     }
                 }
             }

@@ -256,6 +256,8 @@ void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
 
     if (physA->listener && !IsPendingToDelete(physA)) physA->listener->OnCollision(physA, physB);
     if (physB->listener && !IsPendingToDelete(physB)) physB->listener->OnCollision(physB, physA);
+
+    LOG("CONTACT --> A:%d  B:%d", (int)physA->ctype, (int)physB->ctype); //PRUEBA   
 }
 
 void Physics::EndContact(b2ShapeId shapeA, b2ShapeId shapeB)

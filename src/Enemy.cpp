@@ -32,11 +32,11 @@ Enemy::Enemy(int x, int y)
     pbody->ctype = ColliderType::ENEMY;
 
 	// sensores delantero y trasero
-    sensorFront = Engine::GetInstance().physics->CreateRectangleSensor(x + 20, y, 6, 6, DYNAMIC);
+    sensorFront = Engine::GetInstance().physics->CreateRectangleSensor(x + 20, y, 6, 6, STATIC);
     sensorFront->listener = this;
     sensorFront->ctype = ColliderType::SENSOR;
 
-    sensorBack = Engine::GetInstance().physics->CreateRectangleSensor(x - 20, y, 6, 6, DYNAMIC);
+    sensorBack = Engine::GetInstance().physics->CreateRectangleSensor(x - 20, y, 6, 6, STATIC);
     sensorBack->listener = this;
     sensorBack->ctype = ColliderType::SENSOR;
 }
@@ -63,16 +63,27 @@ bool Enemy::Update(float dt)
     return true;
 }
 
-void Enemy::OnCollision(PhysBody* a, PhysBody* b)
+void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
 {
-    bool isWall = (b->ctype == ColliderType::WALL);
-    bool isPlatform = (b->ctype == ColliderType::PLATFORM);
+    LOG("SLIME COLLISION -> A:%d  B:%d", (int)physA->ctype, (int)physB->ctype);
 
-    // gira si el sensor frontal toca muro o plataforma (azul o verde)
-    if (a == sensorFront && (isWall || isPlatform))
+    // Si sensor delantero toca cualquier bloque sólido ? girar izquierda
+    if (physA == sensorFront &&
+        physB->ctype != ColliderType::PLAYER &&
+        physB->ctype != ColliderType::SENSOR &&
+        physB->ctype != ColliderType::UNKNOWN)
+    {
+        LOG("GIRANDO IZQUIERDA");
         direction = -1;
+    }
 
-    // gira si el sensor trasero toca muro o plataforma
-    if (a == sensorBack && (isWall || isPlatform))
+    // Si sensor trasero toca bloque ? girar a derecha
+    if (physA == sensorBack &&
+        physB->ctype != ColliderType::PLAYER &&
+        physB->ctype != ColliderType::SENSOR &&
+        physB->ctype != ColliderType::UNKNOWN)
+    {
+        LOG("GIRANDO DERECHA");
         direction = 1;
+    }
 }
