@@ -257,17 +257,16 @@ bool Map::Load(std::string path, std::string fileName)
                     object;
                     object = object.next_sibling("object"))
                 {
-                    std::string type = object.attribute("type").as_string(); // campo Type en Tiled
+                    std::string type = object.attribute("type").as_string();
+                    std::string name = object.attribute("name").as_string(); 
                     float x = object.attribute("x").as_float();
                     float y = object.attribute("y").as_float();
 
-                    // De momento solo Slime, luego podremos añadir más tipos
-                    if (type == "Slime")
+                    if (name == "Slime")  
                     {
                         auto e = Engine::GetInstance().entityManager->CreateEntity(EntityType::ENEMY);
                         if (e)
                         {
-                            // Convertimos el std::shared_ptr<Entity> en Enemy
                             std::shared_ptr<Enemy> slime = std::dynamic_pointer_cast<Enemy>(e);
                             if (slime)
                             {
