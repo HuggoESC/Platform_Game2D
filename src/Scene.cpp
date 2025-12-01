@@ -41,12 +41,7 @@ bool Scene::Awake()
 // Called before the first frame
 bool Scene::Start()
 {
-	auto slime = std::make_shared<Enemy>(1000, 680); // posición provisional
-	Engine::GetInstance().entityManager->AddEntity(slime);
-
 	Engine::GetInstance().audio->PlayMusic("Assets/Audio/Music/level-iv-339695.wav");
-
-	//L06 TODO 3: Call the function to load the map. 
 	Engine::GetInstance().map->Load("Assets/Maps/", "Level01.tmx");
 	
 	return true;

@@ -20,7 +20,21 @@ Enemy::Enemy(int x, int y)
         { {0,"idle"}, {4,"walkL"}, {14,"jump"}, {28,"walkR"}, {38,"dead"} });
     animations.SetCurrent("walkR");
 
-    // No usamos x,y todavía ? lo colocaremos con SetPosition()
+    // Cuerpo fisico
+    pbody = Engine::GetInstance().physics->CreateCircle(x, y, 14, DYNAMIC);
+    pbody->listener = this;
+    b2Body_SetFixedRotation(pbody->body, true);
+    pbody->ctype = ColliderType::ENEMY;
+
+	// Sensores laterales
+    sensorFront = Engine::GetInstance().physics->CreateRectangleSensor(x + 20, y, 6, 6, DYNAMIC);
+    sensorFront->listener = this;
+    sensorFront->ctype = ColliderType::SENSOR;
+
+    sensorBack = Engine::GetInstance().physics->CreateRectangleSensor(x - 20, y, 6, 6, DYNAMIC);
+    sensorBack->listener = this;
+    sensorBack->ctype = ColliderType::SENSOR;
+
     pbody = Engine::GetInstance().physics->CreateCircle(x, y, 14, DYNAMIC);
     pbody->listener = this;
     b2Body_SetFixedRotation(pbody->body, true);
@@ -36,31 +50,30 @@ bool Enemy::Update(float dt)
 
     int px, py;
     pbody->GetPosition(px, py);
-    position.setX((float)px);
-    position.setY((float)py);
 
-    if (sensorFront && sensorBack)
-    {
-        const int SENSOR_HEIGHT_OFFSET = 14;
+    // Reposicionar sensores
+    sensorFront->SetPosition(px + sensorOffset * direction, py - 10);
+    sensorBack->SetPosition(px - sensorOffset * direction, py - 10);
 
-        sensorFront->SetPosition(px + sensorOffset * direction, py - SENSOR_HEIGHT_OFFSET);
-        sensorBack->SetPosition(px - sensorOffset * direction, py - SENSOR_HEIGHT_OFFSET);
-    }
+    // Movimiento constante
+    Engine::GetInstance().physics->SetXVelocity(pbody, direction * speed);
 
-    // Movimiento estable, sin rebotes automáticos
-    float velX = direction * speed;
-    Engine::GetInstance().physics->SetXVelocity(pbody, velX);
-
+    // Dibujar
     SDL_Rect frame = animations.GetCurrentFrame();
     Engine::GetInstance().render->DrawTexture(texture, px - 16, py - 16, &frame);
+
     return true;
 }
 
 void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
 {
-    if (physA == sensorFront && physB->ctype == ColliderType::WALL)
+    // Sensor delantero toca algo sólido ? gira a la izquierda
+    if (physA == sensorFront &&
+        (physB->ctype == ColliderType::WALL || physB->ctype == ColliderType::PLATFORM))
         direction = -1;
 
-    if (physA == sensorBack && physB->ctype == ColliderType::WALL)
+    // Sensor trasero toca algo sólido ? gira a la derecha
+    if (physA == sensorBack &&
+        (physB->ctype == ColliderType::WALL || physB->ctype == ColliderType::PLATFORM))
         direction = 1;
 }
