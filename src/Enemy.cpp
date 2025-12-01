@@ -54,8 +54,8 @@ bool Enemy::Update(float dt)
 
     Engine::GetInstance().physics->SetXVelocity(pbody, direction * speed);
 
-    sensorFront->SetPosition(px + 16 * direction, py);
-    sensorBack->SetPosition(px - 16 * direction, py);
+  /*  sensorFront->SetPosition(px + 16 * direction, py);
+    sensorBack->SetPosition(px - 16 * direction, py);*/
 
     SDL_Rect frame = animations.GetCurrentFrame();
     Engine::GetInstance().render->DrawTexture(texture, px - 16, py - 16, &frame);
@@ -65,25 +65,16 @@ bool Enemy::Update(float dt)
 
 void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
 {
-    LOG("SLIME COLLISION -> A:%d  B:%d", (int)physA->ctype, (int)physB->ctype);
-
-    // Si sensor delantero toca cualquier bloque sólido ? girar izquierda
-    if (physA == sensorFront &&
+    // Consideramos sólido todo lo que no sea jugador, sensor o desconocido
+    bool bloqueSolido =
         physB->ctype != ColliderType::PLAYER &&
         physB->ctype != ColliderType::SENSOR &&
-        physB->ctype != ColliderType::UNKNOWN)
-    {
-        LOG("GIRANDO IZQUIERDA");
-        direction = -1;
-    }
+        physB->ctype != ColliderType::UNKNOWN;
 
-    // Si sensor trasero toca bloque ? girar a derecha
-    if (physA == sensorBack &&
-        physB->ctype != ColliderType::PLAYER &&
-        physB->ctype != ColliderType::SENSOR &&
-        physB->ctype != ColliderType::UNKNOWN)
+    // Solo nos interesa cuándo el QUE choca es el cuerpo del slime
+    if (physA == pbody && bloqueSolido)
     {
-        LOG("GIRANDO DERECHA");
-        direction = 1;
+        direction *= -1;   // invertimos dirección
+        LOG("SLIME: cambio de dirección");
     }
 }

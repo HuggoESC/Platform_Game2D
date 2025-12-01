@@ -242,13 +242,30 @@ bool Map::Load(std::string path, std::string fileName)
                             STATIC);
 
                         // ---- METADATA INDEX ----
-                        TileSet* metaTS = mapData.tilesets.back();   // MapMetadata es el último tileset
-                        int meta = gid - metaTS->firstGid;           // ? Indice 0/1/2 correcto
+                        TileSet* metaTS = nullptr;
+
+                        // Buscar exactamente el tileset llamado MapMetadata
+                        for (auto ts : mapData.tilesets)
+                        {
+                            if (ts->name == "MapMetadata")
+                            {
+                                metaTS = ts;
+                                break;
+                            }
+                        }
+
+                        if (metaTS == nullptr)
+                        {
+                            LOG("ERROR: No se encontró tileset MapMetadata");
+                            continue;
+                        }
+
+                        int meta = gid - metaTS->firstGid;
 
                         // ---- ASIGNACIÓN FINAL ----
-                        if (meta == 0) c->ctype = ColliderType::PLATFORM;  // ?? Suelo
-                        if (meta == 2) c->ctype = ColliderType::WALL;      // ?? Bloque elevado (slime gira)
-                        if (meta == 1) c->ctype = ColliderType::TOPE;      // ?? Límite de mapa
+                        if (meta == 0) c->ctype = ColliderType::PLATFORM;  // Rojo - suelo
+                        if (meta == 2) c->ctype = ColliderType::WALL;      // Azul - obstáculo
+                        if (meta == 1) c->ctype = ColliderType::TOPE;      // Verde - borde mapa
                     }
                 }
             }
