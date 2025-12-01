@@ -215,31 +215,29 @@ bool Map::Load(std::string path, std::string fileName)
         // Later you can create a function here to load and create the colliders from the map
 
         //Iterate the layer and create colliders
-        for (const auto& mapLayer : mapData.layers) {
+      // === COLISIONES DEL MAPA ===
+        for (const auto& mapLayer : mapData.layers)
+        {
+            // === COLLISIONS REAL ===
             if (mapLayer->name == "Collisions") {
+
                 for (int i = 0; i < mapData.height; i++) {
                     for (int j = 0; j < mapData.width; j++) {
+
                         int gid = mapLayer->Get(i, j);
-                        if (gid == 166) {
-                            Vector2D mapCoord = MapToWorld(i, j);
-                            PhysBody* c = Engine::GetInstance().physics->CreateRectangle(
-                                mapCoord.getX() + mapData.tileWidth / 2,
-                                mapCoord.getY() + mapData.tileHeight / 2,
-                                mapData.tileWidth, mapData.tileHeight,
-                                STATIC
-                            );
-                            c->ctype = ColliderType::PLATFORM;
-                        }
-                        if (gid == 167) {
-                            Vector2D mapCoord = MapToWorld(i, j);
-                            PhysBody* c = Engine::GetInstance().physics->CreateRectangle(
-                                mapCoord.getX() + mapData.tileWidth / 2,
-                                mapCoord.getY() + mapData.tileHeight / 2,
-                                mapData.tileWidth, mapData.tileHeight,
-                                STATIC
-                            );
-                            c->ctype = ColliderType::WALL;
-                        }
+                        if (gid == 0) continue;  
+
+                        Vector2D mapCoord = MapToWorld(i, j);
+                        PhysBody* c = Engine::GetInstance().physics->CreateRectangle(
+                            mapCoord.getX() + mapData.tileWidth / 2,
+                            mapCoord.getY() + mapData.tileHeight / 2,
+                            mapData.tileWidth, mapData.tileHeight,
+                            STATIC
+                        );
+
+                        if (gid == 1) c->ctype = ColliderType::WALL;      
+                        if (gid == 2) c->ctype = ColliderType::WALL;       
+                        if (gid >= 3) c->ctype = ColliderType::PLATFORM;  
                     }
                 }
             }
@@ -334,7 +332,7 @@ bool Map::LoadProperties(pugi::xml_node& node, Properties& properties)
     {
         Properties::Property* p = new Properties::Property();
         p->name = propertieNode.attribute("name").as_string();
-        p->value = propertieNode.attribute("value").as_bool(); // (!!) I'm assuming that all values are bool !!
+        p->value = propertieNode.attribute("value").as_bool(); 
 
         properties.propertyList.push_back(p);
     }

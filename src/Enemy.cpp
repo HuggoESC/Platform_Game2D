@@ -52,12 +52,10 @@ bool Enemy::Update(float dt)
     int px, py;
     pbody->GetPosition(px, py);
 
-    // Movimiento
     Engine::GetInstance().physics->SetXVelocity(pbody, direction * speed);
 
-    // Actualizamos posición de sensores
-    sensorFront->SetPosition(px + sensorOffset * direction, py - 10);
-    sensorBack->SetPosition(px - sensorOffset * direction, py - 10);
+    sensorFront->SetPosition(px + 16 * direction, py);
+    sensorBack->SetPosition(px - 16 * direction, py);
 
     SDL_Rect frame = animations.GetCurrentFrame();
     Engine::GetInstance().render->DrawTexture(texture, px - 16, py - 16, &frame);
@@ -65,13 +63,16 @@ bool Enemy::Update(float dt)
     return true;
 }
 
-void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
+void Enemy::OnCollision(PhysBody* a, PhysBody* b)
 {
-    if (physA == sensorFront &&
-        (physB->ctype == ColliderType::WALL || physB->ctype == ColliderType::PLATFORM))
+    bool isWall = (b->ctype == ColliderType::WALL);
+    bool isPlatform = (b->ctype == ColliderType::PLATFORM);
+
+    // gira si el sensor frontal toca muro o plataforma (azul o verde)
+    if (a == sensorFront && (isWall || isPlatform))
         direction = -1;
 
-    if (physA == sensorBack &&
-        (physB->ctype == ColliderType::WALL || physB->ctype == ColliderType::PLATFORM))
+    // gira si el sensor trasero toca muro o plataforma
+    if (a == sensorBack && (isWall || isPlatform))
         direction = 1;
 }

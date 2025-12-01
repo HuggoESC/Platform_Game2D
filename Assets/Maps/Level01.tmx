@@ -1557,7 +1557,7 @@
   <object id="1" name="Player" type="player" x="64" y="641.333" width="32" height="32"/>
  </objectgroup>
  <objectgroup id="11" name="Entities">
-  <object id="3" name="Slime" type="Enemy" x="1470.67" y="670.667" width="32" height="32"/>
+  <object id="3" name="Slime" type="Enemy" x="1471.22" y="670.135" width="32" height="32" rotation="1.93917"/>
  </objectgroup>
  <layer id="13" name="Fondo" width="64" height="24">
   <data>
@@ -2457,7 +2457,7 @@
    <tile gid="172"/>
    <tile gid="173"/>
    <tile gid="174"/>
-   <tile/>
+   <tile gid="182"/>
    <tile gid="182"/>
    <tile gid="183"/>
    <tile gid="184"/>
@@ -2521,7 +2521,7 @@
    <tile gid="182"/>
    <tile gid="183"/>
    <tile gid="184"/>
-   <tile/>
+   <tile gid="192"/>
    <tile gid="192"/>
    <tile gid="193"/>
    <tile gid="194"/>
@@ -2585,7 +2585,7 @@
    <tile gid="192"/>
    <tile gid="193"/>
    <tile gid="194"/>
-   <tile/>
+   <tile gid="202"/>
    <tile gid="202"/>
    <tile gid="203"/>
    <tile gid="204"/>
@@ -2649,7 +2649,7 @@
    <tile gid="202"/>
    <tile gid="203"/>
    <tile gid="204"/>
-   <tile/>
+   <tile gid="216"/>
    <tile gid="220"/>
    <tile gid="220"/>
    <tile gid="220"/>
@@ -2713,7 +2713,7 @@
    <tile gid="220"/>
    <tile gid="220"/>
    <tile gid="220"/>
-   <tile/>
+   <tile gid="216"/>
    <tile gid="220"/>
    <tile gid="220"/>
    <tile gid="220"/>
@@ -2777,7 +2777,7 @@
    <tile gid="220"/>
    <tile gid="220"/>
    <tile gid="220"/>
-   <tile/>
+   <tile gid="216"/>
    <tile gid="220"/>
    <tile gid="220"/>
    <tile gid="220"/>
@@ -2841,7 +2841,7 @@
    <tile gid="220"/>
    <tile gid="220"/>
    <tile gid="220"/>
-   <tile/>
+   <tile gid="216"/>
    <tile gid="220"/>
    <tile gid="220"/>
    <tile gid="220"/>

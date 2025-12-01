@@ -33,7 +33,8 @@ enum class ColliderType {
     ENEMY,
     UNKNOWN,
     TOPE,
-    // ..
+    BLUE_BLOCK
+    
 };
 
 // Small class to return to other modules to track position and rotation of physics bodies
