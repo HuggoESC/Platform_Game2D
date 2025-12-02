@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <tileset version="1.10" tiledversion="1.11.2" name="Hoguera" tilewidth="32" tileheight="32" tilecount="5" columns="5">
- <image source="Hoguera.png" width="160" height="32"/>
+ <image source="hoguera.png" width="160" height="32"/>
  <tile id="0">
   <animation>
    <frame tileid="0" duration="150"/>

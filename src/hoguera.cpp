@@ -8,7 +8,7 @@
 hoguera::hoguera(int x, int y)
     : Entity(EntityType::UNKNOWN)   // O hacer un nuevo EntityType::HOGUERA si luego quieres
 {
-    name = "Hoguera";
+    name = "hoguera";
 
     position.setX((float)x);
     position.setY((float)y);

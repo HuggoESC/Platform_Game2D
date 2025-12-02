@@ -7,7 +7,6 @@
  <tileset firstgid="172" name="Fondo" tilewidth="32" tileheight="32" tilecount="50" columns="10">
   <image source="oak_woods_v1.0/background/background_layer_1.png" width="320" height="180"/>
  </tileset>
- <tileset firstgid="222" source="../Textures/Hoguera.tsx"/>
  <layer id="4" name="Foreground" width="64" height="24">
   <properties>
    <property name="Draw" type="bool" value="true"/>
@@ -1559,7 +1558,7 @@
  </objectgroup>
  <objectgroup id="11" name="Entities">
   <object id="3" name="Slime" type="Enemy" x="1471.22" y="670.135" width="32" height="32" rotation="1.93917"/>
-  <object id="5" name="Hoguera" type="Hoguera" x="895.333" y="354" width="32.6667" height="30.6667"/>
+  <object id="5" name="hoguera" type="hoguera" x="895.333" y="354" width="32.6667" height="30.6667"/>
  </objectgroup>
  <layer id="13" name="Fondo" width="64" height="24">
   <data>

@@ -315,7 +315,7 @@ bool Map::Load(std::string path, std::string fileName)
                             }
                         }
                     }
-                    if (name == "Hoguera") {
+                    if (name == "hoguera") {
 						std::shared_ptr<hoguera> fogata = std::make_shared<hoguera>((int)x, (int)y);
 						Engine::GetInstance().entityManager->AddEntity(fogata);
                     }
