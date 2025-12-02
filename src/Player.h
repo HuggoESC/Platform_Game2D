@@ -56,6 +56,7 @@ public:
 	int jumpCount = 0; // Counter to track the number of jumps
 	bool isJumping = false; // Flag to check if the player is currently jumping
 	bool isDashing = false; // Flag to check if the player is currently dashing
+	bool onGround = false;
 	bool canDash = true; // Flag to check if the player can dash
 	bool facingLeft = false;
 	bool GodMode = false; // Flag for God Mode

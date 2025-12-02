@@ -1561,7 +1561,7 @@
  </objectgroup>
  <layer id="13" name="Fondo" width="64" height="24">
   <data>
-   <tile gid="172"/>
+   <tile gid="51"/>
    <tile gid="172"/>
    <tile gid="172"/>
    <tile gid="172"/>

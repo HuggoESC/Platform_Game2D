@@ -221,6 +221,7 @@ bool Map::Load(std::string path, std::string fileName)
         //Iterate the layer and create colliders
       // === COLISIONES DEL MAPA ===
        // === COLISIONES DEL MAPA ===
+       // === COLISIONES DEL MAPA ===
         for (const auto& mapLayer : mapData.layers)
         {
             if (mapLayer->name == "Collisions")
@@ -241,31 +242,44 @@ bool Map::Load(std::string path, std::string fileName)
                             mapData.tileWidth, mapData.tileHeight,
                             STATIC);
 
-                        // ---- METADATA INDEX ----
-                        TileSet* metaTS = nullptr;
-
-                        // Buscar exactamente el tileset llamado MapMetadata
-                        for (auto ts : mapData.tilesets)
+                        // 1) Averiguamos de qué tileset viene este gid
+                        TileSet* ts = GetTilesetFromTileId(gid);
+                        if (ts == nullptr)
                         {
-                            if (ts->name == "MapMetadata")
-                            {
-                                metaTS = ts;
-                                break;
-                            }
-                        }
-
-                        if (metaTS == nullptr)
-                        {
-                            LOG("ERROR: No se encontró tileset MapMetadata");
+                            c->ctype = ColliderType::UNKNOWN;
                             continue;
                         }
 
-                        int meta = gid - metaTS->firstGid;
+                        // 2) Si NO es MapMetadata, lo tratamos como suelo por defecto
+                        if (ts->name != "MapMetadata")
+                        {
+                            c->ctype = ColliderType::PLATFORM;
+                            continue;
+                        }
 
-                        // ---- ASIGNACIÓN FINAL ----
-                        if (meta == 0) c->ctype = ColliderType::PLATFORM;  // Rojo - suelo
-                        if (meta == 2) c->ctype = ColliderType::WALL;      // Azul - obstáculo
-                        if (meta == 1) c->ctype = ColliderType::TOPE;      // Verde - borde mapa
+                        // 3) Si SÍ es MapMetadata, calculamos el índice local (0,1,2...)
+                        int localId = gid - ts->firstGid;
+
+                        // 4) Asignamos tipo según el color
+                        switch (localId)
+                        {
+                        case 0: // rojo
+                            c->ctype = ColliderType::PLATFORM;
+                            break;
+                        case 1: // verde
+                            c->ctype = ColliderType::TOPE;
+                            break;
+                        case 2: // azul
+                            c->ctype = ColliderType::WALL;
+                            break;
+                        default:
+                            c->ctype = ColliderType::UNKNOWN;
+                            break;
+                        }
+
+                        // DEBUG opcional:
+                        LOG("COLL TILE gid=%d  firstGid=%d  local=%d  type=%d",
+                            gid, ts->firstGid, localId, (int)c->ctype);
                     }
                 }
             }

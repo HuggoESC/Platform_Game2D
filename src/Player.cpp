@@ -155,17 +155,35 @@ void Player::Move() {
     }
 }
 
-void Player::Jump() {
-    if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN && jumpCount < 2) {
-        Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
-        
-        Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, 0.0f, -jumpForce, true);
-        
-        anims.SetCurrent("jump");
-        isJumping = true;
-        jumpCount++;
-    }
+void Player::Jump()
+{
+	// Solo reaccionamos en el frame donde se pulsa la tecla
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN)
+	{
+		// ?? PRIMER SALTO: estamos en el suelo
+		if (onGround)
+		{
+			Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
+			Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, 0.0f, -jumpForce, true);
+
+			isJumping = true;
+			onGround = false;
+			jumpCount = 1;        // hemos gastado el primer salto
+			anims.SetCurrent("jump");
+		}
+		// ?? DOBLE SALTO: ya hemos saltado una vez, estamos en el aire
+		else if (!onGround && jumpCount == 1)
+		{
+			Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
+			Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, 0.0f, -jumpForce, true);
+
+			isJumping = true;
+			jumpCount = 2;        // segundo salto gastado
+			anims.SetCurrent("jump");
+		}
+	}
 }
+
 void Player::Dash() {
     if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_LSHIFT) == KEY_DOWN && !isDashing && canDash == true) {
         isDashing = true;
@@ -255,31 +273,28 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 	switch (physB->ctype)
 	{
 	case ColliderType::PLATFORM:
-		LOG("Collision PLATFORM");
-		//reset the jump flag when touching the ground
-		isJumping = false;
-		isDashing = false;
-		canDash = true;
-		jumpCount = 0;
-		anims.SetCurrent("idle");
-		break;
 	case ColliderType::TOPE:
-		LOG("Collision TOPE");
-		//reset the jump flag when touching the ground
+		LOG("Collision GROUND (PLATFORM/TOPE)");
+		// Estamos TOCANDO SUELO
+		onGround = true;
 		isJumping = false;
 		isDashing = false;
 		canDash = true;
 		jumpCount = 0;
 		anims.SetCurrent("idle");
 		break;
+
 	case ColliderType::ITEM:
 		LOG("Collision ITEM");
 		Engine::GetInstance().audio->PlayFx(pickCoinFxId);
-		physB->listener->Destroy();
+		if (physB->listener)
+			physB->listener->Destroy();
 		break;
+
 	case ColliderType::UNKNOWN:
 		LOG("Collision UNKNOWN");
 		break;
+
 	default:
 		break;
 	}
@@ -287,20 +302,24 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 
 void Player::OnCollisionEnd(PhysBody* physA, PhysBody* physB)
 {
-
-	if (GodMode) return; 
+	if (GodMode) return;
 
 	switch (physB->ctype)
 	{
 	case ColliderType::PLATFORM:
-		LOG("End Collision PLATFORM");
+	case ColliderType::TOPE:
+		LOG("End Collision GROUND (PLATFORM/TOPE)");
+		onGround = false;   // ya no estamos apoyados
 		break;
+
 	case ColliderType::ITEM:
 		LOG("End Collision ITEM");
 		break;
+
 	case ColliderType::UNKNOWN:
 		LOG("End Collision UNKNOWN");
 		break;
+
 	default:
 		break;
 	}
