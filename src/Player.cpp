@@ -98,8 +98,9 @@ bool Player::Update(float dt)
 		}
 	}
 	
-	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_G) == KEY_DOWN) {
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_F10) == KEY_DOWN) {
 		GodMode = !GodMode;
+		LOG("GOD MODE: %S", GodMode ? "ON" : "OFF");
 	}
 	
 
@@ -121,6 +122,22 @@ void Player::GetPhysicsValues() {
 
 void Player::Move() {
     if (isDashing && !isDecelerating) return;
+
+	if (GodMode)
+	{
+		float gmSpeed = 6.0f;
+
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_W) == KEY_REPEAT)
+			pbody->SetPosition(position.getX(), position.getY() - gmSpeed);
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_S) == KEY_REPEAT)
+			pbody->SetPosition(position.getX(), position.getY() + gmSpeed);
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT)
+			pbody->SetPosition(position.getX() - gmSpeed, position.getY());
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT)
+			pbody->SetPosition(position.getX() + gmSpeed, position.getY());
+
+		return; 
+	}
     
     // Move left/right
     if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT) {
@@ -232,6 +249,9 @@ bool Player::CleanUp()
 
 // L08 TODO 6: Define OnCollision function for the player. 
 void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
+
+	if (GodMode) return;
+
 	switch (physB->ctype)
 	{
 	case ColliderType::PLATFORM:
@@ -267,6 +287,9 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 
 void Player::OnCollisionEnd(PhysBody* physA, PhysBody* physB)
 {
+
+	if (GodMode) return; 
+
 	switch (physB->ctype)
 	{
 	case ColliderType::PLATFORM:

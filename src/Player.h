@@ -69,4 +69,5 @@ private:
     float dashAcceleration = 2.0f;   
     float dashDeceleration = 1.0f;   
     bool isDecelerating = false;    
+
 };
