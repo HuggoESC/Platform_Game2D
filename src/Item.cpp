@@ -23,10 +23,10 @@ bool Item::Awake() {
 bool Item::Start() {
 
 	//initilize textures
-	texture = Engine::GetInstance().textures->Load("Assets/Textures/Daga.png");
+	textureDaga = Engine::GetInstance().textures->Load("Assets/Textures/Daga.png");
 	
 	// L08 TODO 4: Add a physics to an item - initialize the physics body
-	Engine::GetInstance().textures.get()->GetSize(texture, texW, texH);
+	Engine::GetInstance().textures.get()->GetSize(textureDaga, texW, texH);
 	pbody = Engine::GetInstance().physics->CreateCircle((int)position.getX() + texH / 2, (int)position.getY() + texH / 2, texH / 2, bodyType::DYNAMIC);
 
 	// L08 TODO 7: Assign collider type
@@ -48,14 +48,14 @@ bool Item::Update(float dt)
 	position.setX((float)x);
 	position.setY((float)y);
 
-	Engine::GetInstance().render->DrawTexture(texture, x - texW / 2, y - texH / 2);
+	Engine::GetInstance().render->DrawTexture(textureDaga, x - texW / 2, y - texH / 2);
 
 	return true;
 }
 
 bool Item::CleanUp()
 {
-	Engine::GetInstance().textures->UnLoad(texture);
+	Engine::GetInstance().textures->UnLoad(textureDaga);
 	Engine::GetInstance().physics->DeletePhysBody(pbody);
 	return true;
 }

@@ -24,6 +24,11 @@ bool Player::Awake() {
 	//L03: TODO 2: Initialize Player parameters
 	position = Vector2D(96,650);
 	spawnPosition = position;
+
+	// default look direction to the right
+	lookDir.setX(1.0f);
+	lookDir.setY(0.0f);
+
 	return true;
 }
 
@@ -63,6 +68,7 @@ bool Player::Update(float dt)
 		Jump();
 		Teleport();
 		ApplyPhysics();
+		Attack(dt);
 		Draw(dt);
 
 	//Muerte por caída (no afecta en GodMode)
@@ -123,6 +129,22 @@ void Player::GetPhysicsValues() {
 void Player::Move() {
     if (isDashing && !isDecelerating) return;
 
+	// Update look direction from WASD input (if any)
+	int in_dx = 0, in_dy = 0;
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_W) == KEY_REPEAT) in_dy -= 1;
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_S) == KEY_REPEAT) in_dy += 1;
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT) in_dx -= 1;
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT) in_dx += 1;
+	if (in_dx != 0 || in_dy != 0) {
+		float fx = (float)in_dx;
+		float fy = (float)in_dy;
+		float len = sqrtf(fx * fx + fy * fy);
+		if (len != 0.0f) {
+			lookDir.setX(fx / len);
+			lookDir.setY(fy / len);
+		}
+	}
+
 	if (GodMode)
 	{
 		float gmSpeed = 6.0f;
@@ -160,7 +182,7 @@ void Player::Jump()
 	// Solo reaccionamos en el frame donde se pulsa la tecla
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN)
 	{
-		// ?? PRIMER SALTO: estamos en el suelo
+		// PRIMER SALTO: estamos en el suelo
 		if (jumpCount == 0)
 		{
 			Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
@@ -171,7 +193,7 @@ void Player::Jump()
 			jumpCount = 1;        // hemos gastado el primer salto
 			anims.SetCurrent("jump");
 		}
-		// ?? DOBLE SALTO: ya hemos saltado una vez, estamos en el aire
+		// DOBLE SALTO: ya hemos saltado una vez, estamos en el aire
 		else if (jumpCount == 1)
 		{
 			Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
@@ -225,6 +247,79 @@ void Player::ApplyPhysics() {
     // Apply velocity via helper
     Engine::GetInstance().physics->SetLinearVelocity(pbody, velocity);
 }
+void Player::Attack(float dt) {
+	// dt is in milliseconds
+	// If attack already active -> advance it
+	if (attackActive) {
+		// compute movement this frame (pixels)
+		float move = attackSpeed * (dt / 1000.0f);
+		if (move > attackRemaining) move = attackRemaining;
+		attackRemaining -= move;
+		attackPos.setX(attackPos.getX() + attackDir.getX() * move);
+		attackPos.setY(attackPos.getY() + attackDir.getY() * move);
+
+		if (attackRemaining <= 0.0f) {
+			attackActive = false;
+		}
+		return;
+	}
+
+	// Start attack when E pressed
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_E) == KEY_DOWN) {
+		// Determine direction from WASD (use current input, allow diagonals)
+		int dx = 0, dy = 0;
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_W) == KEY_REPEAT) dy -= 1;
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_S) == KEY_REPEAT) dy += 1;
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT) dx -= 1;
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT) dx += 1;
+
+		float fx = 0.0f, fy = 0.0f;
+
+		// If no WASD input, use lookDir
+		if (dx == 0 && dy == 0) {
+			fx = lookDir.getX();
+			fy = lookDir.getY();
+			// fallback to face right if lookDir zero
+			if (fx == 0.0f && fy == 0.0f) { fx = 1.0f; fy = 0.0f; }
+		}
+		else {
+			// Normalize direction
+			fx = (float)dx;
+			fy = (float)dy;
+			float len = sqrtf(fx * fx + fy * fy);
+			if (len == 0.0f) return;
+			fx /= len;
+			fy /= len;
+			// update lookDir to this explicit input
+			lookDir.setX(fx);
+			lookDir.setY(fy);
+		}
+
+		// Get player center
+		int px = 0, py = 0;
+		if (pbody) pbody->GetPosition(px, py);
+
+		// Spawn the attack *in front* of the player:
+		// offset by player's half-width (texW/2) plus a small margin so it doesn't overlap the sprite.
+		const float spawnOffset = (float)(texW / 2) + 12.0f;
+
+		attackDir.setX(fx);
+		attackDir.setY(fy);
+
+		attackPos.setX((float)px + attackDir.getX() * spawnOffset);
+		attackPos.setY((float)py + attackDir.getY() * spawnOffset);
+
+		attackRemaining = attackTotal;
+		attackActive = true;
+
+		// Small immediate advance so triangle is clearly visible (optional)
+		float initialMove = std::min(2.0f, attackRemaining);
+		attackPos.setX(attackPos.getX() + attackDir.getX() * initialMove);
+		attackPos.setY(attackPos.getY() + attackDir.getY() * initialMove);
+		attackRemaining -= initialMove;
+		if (attackRemaining <= 0.0f) attackActive = false;
+	}
+}
 
 void Player::Draw(float dt) {
 
@@ -256,6 +351,40 @@ void Player::Draw(float dt) {
 		0,
 		facingLeft
 	);
+
+	// Draw attack triangle (white) if active
+	if (attackActive) {
+		// tip at attackPos, base behind tip by attackLength
+		float tx = attackPos.getX();
+		float ty = attackPos.getY();
+
+		// direction normalized already in attackDir
+		float dx = attackDir.getX();
+		float dy = attackDir.getY();
+
+		// base center
+		float bx = tx - dx * (float)attackLength;
+		float by = ty - dy * (float)attackLength;
+
+		// perpendicular
+		float px = -dy;
+		float py = dx;
+		// half width
+		float hw = (float)attackHalfWidth;
+
+		// base vertices
+		int ax = (int)std::round(bx + px * hw);
+		int ay = (int)std::round(by + py * hw);
+		int bx_i = (int)std::round(bx - px * hw);
+		int by_i = (int)std::round(by - py * hw);
+		int tipx = (int)std::round(tx);
+		int tipy = (int)std::round(ty);
+
+		// Draw triangle outline (3 lines) in world coords (Render will apply camera)
+		Engine::GetInstance().render->DrawLine(tipx, tipy, ax, ay, 255, 255, 255, 255, true);
+		Engine::GetInstance().render->DrawLine(ax, ay, bx_i, by_i, 255, 255, 255, 255, true);
+		Engine::GetInstance().render->DrawLine(bx_i, by_i, tipx, tipy, 255, 255, 255, 255, true);
+	}
 }
 
 bool Player::CleanUp()
