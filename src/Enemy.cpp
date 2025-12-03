@@ -52,8 +52,9 @@ bool Enemy::Update(float dt)
     int px, py;
     pbody->GetPosition(px, py);
 
-    Engine::GetInstance().physics->SetXVelocity(pbody, direction * speed);
-
+    b2Vec2 vel = Engine::GetInstance().physics->GetLinearVelocity(pbody);
+    vel.x = direction * speed;
+    Engine::GetInstance().physics->SetLinearVelocity(pbody, vel);
   /*  sensorFront->SetPosition(px + 16 * direction, py);
     sensorBack->SetPosition(px - 16 * direction, py);*/
 
