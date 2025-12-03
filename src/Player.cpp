@@ -161,7 +161,7 @@ void Player::Jump()
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN)
 	{
 		// ?? PRIMER SALTO: estamos en el suelo
-		if (onGround)
+		if (jumpCount == 0)
 		{
 			Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
 			Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, 0.0f, -jumpForce, true);
@@ -172,7 +172,7 @@ void Player::Jump()
 			anims.SetCurrent("jump");
 		}
 		// ?? DOBLE SALTO: ya hemos saltado una vez, estamos en el aire
-		else if (!onGround && jumpCount == 1)
+		else if (jumpCount == 1)
 		{
 			Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
 			Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, 0.0f, -jumpForce, true);
