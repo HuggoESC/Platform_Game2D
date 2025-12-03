@@ -6,6 +6,7 @@
 #include "Physics.h"
 #include "EntityManager.h"
 #include "Enemy.h"
+#include "hoguera.h"
 
 #include <math.h>
 
@@ -313,6 +314,10 @@ bool Map::Load(std::string path, std::string fileName)
                                 slime->SetPosition((int)x, (int)y);
                             }
                         }
+                    }
+                    if (name == "hoguera") {
+						std::shared_ptr<hoguera> fogata = std::make_shared<hoguera>((int)x, (int)y);
+						Engine::GetInstance().entityManager->AddEntity(fogata);
                     }
                 }
             }
