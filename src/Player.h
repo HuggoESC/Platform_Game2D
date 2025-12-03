@@ -62,6 +62,9 @@ public:
 	bool facingLeft = false;
 	bool GodMode = false; // Flag for God Mode
 
+	// New: only allow attack after picking Daga
+	bool canAttack = false;
+
 private: 
 	b2Vec2 velocity;
 	AnimationSet anims;

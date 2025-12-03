@@ -97,18 +97,25 @@ bool Scene::SaveGameToSlot(int slot)
 	pugi::xml_document file;
 	pugi::xml_node root = file.append_child("save");
 
-	// Guardar SOLO la posición del jugador
+	// Guardar jugador
 	pugi::xml_node p = root.append_child("player");
 	p.append_attribute("x") = player->position.getX();
 	p.append_attribute("y") = player->position.getY();
 
-	if (!file.save_file(path.c_str()))
+	// Guardar entidades
+	pugi::xml_node ents = root.append_child("entities");
+
+	for (auto& e : Engine::GetInstance().entityManager->entities)
 	{
-		LOG("ERROR guardando slot %d", slot);
-		return false;
+		pugi::xml_node n = ents.append_child("entity");
+		n.append_attribute("type") = (int)e->type;
+		n.append_attribute("x") = e->position.getX();
+		n.append_attribute("y") = e->position.getY();
 	}
 
+	file.save_file(path.c_str());
 	LOG("Slot %d guardado correctamente.", slot);
+
 	return true;
 }
 
@@ -119,6 +126,7 @@ bool Scene::LoadGameFromSlot(int slot)
 
 	pugi::xml_document file;
 	pugi::xml_parse_result res = file.load_file(path.c_str());
+
 	if (!res)
 	{
 		LOG("ERROR: El slot %d no existe o está vacío.", slot);
@@ -126,23 +134,34 @@ bool Scene::LoadGameFromSlot(int slot)
 	}
 
 	pugi::xml_node root = file.child("save");
-	pugi::xml_node p = root.child("player");
 
-	float x = p.attribute("x").as_float();
-	float y = p.attribute("y").as_float();
+	// Cargar jugador
+	auto p = root.child("player");
+	player->position = Vector2D(
+		p.attribute("x").as_float(),
+		p.attribute("y").as_float()
+	);
 
-	// Mover la posición lógica del jugador
-	player->position = Vector2D(x, y);
+	// Reset entidades
+	Engine::GetInstance().entityManager->entities.clear();
 
-	// Mover también el cuerpo físico si existe
-	if (player->pbody != nullptr)
-		player->pbody->SetPosition((int)x, (int)y);
+	for (auto e : root.child("entities").children("entity"))
+	{
+		EntityType t = (EntityType)e.attribute("type").as_int();
+		float x = e.attribute("x").as_float();
+		float y = e.attribute("y").as_float();
 
+		auto ent = Engine::GetInstance().entityManager->CreateEntity(t);
+		if (ent)
+			ent->position = Vector2D(x, y);
+	}
+
+	// Mostrar notificación en pantalla
 	ShowLoadNotification(slot);
 
-	LOG("Slot %d cargado correctamente.", slot);
 	return true;
 }
+
 void Scene::ShowLoadNotification(int slot)
 {
 	loadNotificationSlot = slot;
