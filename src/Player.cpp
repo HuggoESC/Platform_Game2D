@@ -461,6 +461,29 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		canAttack = true;
 		break;
 
+	case ColliderType::ENEMY:
+		LOG("Collision ENEMY - Respawning!");
+		// Reset velocidad física
+		Engine::GetInstance().physics->SetLinearVelocity(pbody, {0.0f, 0.0f});
+
+		// Teletransportar al spawn
+		pbody->SetPosition((int)spawnPosition.getX(), (int)spawnPosition.getY());
+
+		// Actualizar valores internos de posición
+		position = spawnPosition;
+
+		// Reposicionar cámara para centrar al jugador tras el respawn
+		Engine::GetInstance().render->camera.x = -position.getX() + Engine::GetInstance().render->camera.w / 14;
+		Engine::GetInstance().render->camera.y = -position.getY() + Engine::GetInstance().render->camera.h * 9 / 10;
+
+		// Reset estado
+		anims.SetCurrent("idle");
+		isJumping = false;
+		isDashing = false;
+		canDash = true;
+		jumpCount = 0;
+		break;
+
 	case ColliderType::UNKNOWN:
 		LOG("Collision UNKNOWN");
 		break;
