@@ -305,46 +305,53 @@ bool Physics::IsPendingToDelete(PhysBody* physBody) {
 }
 
 // --- Velocity helpers
+// --- Velocity helpers
 b2Vec2 Physics::GetLinearVelocity(const PhysBody* p) const
 {
+    // 1) Puntero nulo ? velocidad cero
+    if (p == nullptr)
+        return b2Vec2{ 0.0f, 0.0f };
+
+    // 2) BodyId nulo o inválido ? velocidad cero
+    if (B2_IS_NULL(p->body) || !b2Body_IsValid(p->body))
+        return b2Vec2{ 0.0f, 0.0f };
+
+    // 3) Body válido ? preguntamos a Box2D
     return b2Body_GetLinearVelocity(p->body);
 }
 
 float Physics::GetXVelocity(const PhysBody* p) const
 {
+    if (p == nullptr || B2_IS_NULL(p->body))
+        return 0.0f;
+
     return b2Body_GetLinearVelocity(p->body).x;
 }
 
 float Physics::GetYVelocity(const PhysBody* p) const
 {
+    if (p == nullptr || B2_IS_NULL(p->body))
+        return 0.0f;
+
     return b2Body_GetLinearVelocity(p->body).y;
 }
 
 void Physics::SetLinearVelocity(PhysBody* p, const b2Vec2& v) const
 {
+    if (p == nullptr || B2_IS_NULL(p->body))
+        return;
+
     b2Body_SetLinearVelocity(p->body, v);
 }
 
 void Physics::SetLinearVelocity(PhysBody* p, float vx, float vy) const
 {
+    if (p == nullptr || B2_IS_NULL(p->body))
+        return;
+
     b2Vec2 v = { vx, vy };
     b2Body_SetLinearVelocity(p->body, v);
 }
-
-void Physics::SetXVelocity(PhysBody* p, float vx) const
-{
-    b2Vec2 v = b2Body_GetLinearVelocity(p->body);
-    v.x = vx;
-    b2Body_SetLinearVelocity(p->body, v);
-}
-
-void Physics::SetYVelocity(PhysBody* p, float vy) const
-{
-    b2Vec2 v = b2Body_GetLinearVelocity(p->body);
-    v.y = vy;
-    b2Body_SetLinearVelocity(p->body, v);
-}
-
 // --- Impulse helper
 void Physics::ApplyLinearImpulseToCenter(PhysBody* p, float ix, float iy, bool wake) const
 {

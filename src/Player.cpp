@@ -185,7 +185,9 @@ void Player::Jump()
 		// PRIMER SALTO: estamos en el suelo
 		if (jumpCount == 0)
 		{
-			Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
+			b2Vec2 vel = Engine::GetInstance().physics->GetLinearVelocity(pbody);
+			vel.y = 0.0f;
+			Engine::GetInstance().physics->SetLinearVelocity(pbody, vel);
 			Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, 0.0f, -jumpForce, true);
 
 			isJumping = true;
@@ -196,7 +198,9 @@ void Player::Jump()
 		// DOBLE SALTO: ya hemos saltado una vez, estamos en el aire
 		else if (jumpCount == 1)
 		{
-			Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
+			b2Vec2 vel = Engine::GetInstance().physics->GetLinearVelocity(pbody);
+			vel.y = 0.0f;
+			Engine::GetInstance().physics->SetLinearVelocity(pbody, vel);
 			Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, 0.0f, -jumpForce, true);
 
 			isJumping = true;
