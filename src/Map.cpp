@@ -9,6 +9,7 @@
 #include "hoguera.h"
 
 #include <math.h>
+#include <algorithm>
 
 Map::Map() : Module(), mapLoaded(false), helpTexture(nullptr), showHelpTexture(false)
 {
@@ -395,5 +396,59 @@ Vector2D Map::GetMapSizeInPixels()
     sizeInPixels.setX((float)(mapData.width * mapData.tileWidth));
     sizeInPixels.setY((float)(mapData.height * mapData.tileHeight));
     return sizeInPixels;
+}
+
+void Map::WorldToMap(int x, int y, int& row, int& col) const
+{
+    if (mapData.tileWidth <= 0 || mapData.tileHeight <= 0) {
+        row = col = 0;
+        return;
+    }
+
+    col = x / mapData.tileWidth;
+    row = y / mapData.tileHeight;
+
+    // clamp
+    if (col < 0) col = 0;
+    if (row < 0) row = 0;
+    if (col >= mapData.width) col = mapData.width - 1;
+    if (row >= mapData.height) row = mapData.height - 1;
+}
+
+bool Map::IsCollisionTileAt(int row, int col) const
+{
+    if (row < 0 || col < 0 || row >= mapData.height || col >= mapData.width) return false;
+
+    for (const auto& layer : mapData.layers) {
+        if (layer->name == "Collisions") {
+            unsigned int gid = layer->Get(row, col);
+            if (gid != 0) return true;
+            // otherwise empty -> not collision
+            return false;
+        }
+    }
+
+    // If no Collisions layer present, assume not colliding
+    return false;
+}
+
+int Map::GetTileWidth() const
+{
+    return mapData.tileWidth;
+}
+
+int Map::GetTileHeight() const
+{
+    return mapData.tileHeight;
+}
+
+int Map::GetWidth() const
+{
+    return mapData.width;
+}
+
+int Map::GetHeight() const
+{
+    return mapData.height;
 }
 

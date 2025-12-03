@@ -75,14 +75,7 @@ struct TileSet
     SDL_Rect GetRect(unsigned int gid) {
         SDL_Rect rect = { 0 };
 
-        // 
-        // Protecciуn: si los datos del tileset no son vбlidos, no dibujamos nada
-        if (columns == 0 || tileWidth == 0 || tileHeight == 0) {
-            return rect;   // rect lleno de ceros ? no se verб nada, pero NO peta
-        }
-
         int relativeIndex = gid - firstGid;
-
         rect.w = tileWidth;
         rect.h = tileHeight;
         rect.x = margin + (tileWidth + spacing) * (relativeIndex % columns);
@@ -142,6 +135,18 @@ public:
 	// L10: TODO 7: Create a method to get the map size in pixels
 	Vector2D GetMapSizeInPixels();
 
+    // NEW: helper to convert world coordinates (pixels) to map tile coordinates (row, col)
+    void WorldToMap(int x, int y, int& row, int& col) const;
+
+    // NEW: query if the collisions layer has a tile at given tile coords (true => blocked)
+    bool IsCollisionTileAt(int row, int col) const;
+
+    // NEW: accessors for tile / map size
+    int GetTileWidth() const;
+    int GetTileHeight() const;
+    int GetWidth() const;
+    int GetHeight() const;
+
 public: 
     std::string mapFileName;
     std::string mapPath;
@@ -151,7 +156,7 @@ private:
     // L06: DONE 1: Declare a variable data of the struct MapData
     MapData mapData;
 
-    SDL_Texture* helpTexture;        
-    bool showHelpTexture;            
-    SDL_Rect helpTextureRect;        
+    SDL_Texture* helpTexture;        // Текстура для PNG файла
+    bool showHelpTexture;            // Флаг для отображения/скрытия текстуры
+    SDL_Rect helpTextureRect;        // Прямоугольник для позиционирования текстуры
 };
