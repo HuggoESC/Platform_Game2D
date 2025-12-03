@@ -1558,7 +1558,7 @@
  </objectgroup>
  <objectgroup id="11" name="Entities">
   <object id="3" name="Slime" type="Enemy" x="1471.22" y="670.135" width="32" height="32" rotation="1.93917"/>
-  <object id="5" name="hoguera" type="hoguera" x="895.333" y="354" width="32.6667" height="30.6667"/>
+  <object id="5" name="hoguera" type="hoguera" x="898.333" y="370" width="32.6667" height="30.6667"/>
  </objectgroup>
  <layer id="13" name="Fondo" width="64" height="24">
   <data>
