@@ -34,6 +34,7 @@ private:
 	void Move();
 	void Jump();
 	void Dash();
+	void Attack(float dt);
 	void Teleport();
 	void ApplyPhysics();
 	void Draw(float dt);
@@ -71,4 +72,16 @@ private:
     float dashDeceleration = 1.0f;   
     bool isDecelerating = false;    
 
+	// Attack (visual projectile) state
+	bool attackActive = false;
+	Vector2D attackPos;          // current position in pixels/world coords
+	Vector2D attackDir;          // normalized direction (pixels)
+	float attackRemaining = 0.0f; // pixels remaining to travel
+	const float attackTotal = 16.0f; // total travel distance in pixels
+	float attackSpeed = 300.0f;  // pixels per second (tweakable)
+	int attackLength = 24;        // visual triangle length in pixels
+	int attackHalfWidth = 4;     // half base width in pixels
+
+	// Last look direction used when no WASD input on attack
+	Vector2D lookDir;
 };

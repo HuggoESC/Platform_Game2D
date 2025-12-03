@@ -28,7 +28,7 @@ public:
 
 private:
 
-	SDL_Texture* texture;
+	SDL_Texture* textureDaga;
 	const char* texturePath;
 	int texW, texH;
 
