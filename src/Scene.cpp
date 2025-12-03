@@ -91,7 +91,7 @@ bool Scene::Update(float dt)
 
 bool Scene::SaveGameToSlot(int slot)
 {
-	std::string path = "Saves/slot" + std::to_string(slot) + ".xml";
+	std::string path = "slot" + std::to_string(slot) + ".xml";
 	LOG("Guardando slot %d...", slot);
 
 	pugi::xml_document file;
@@ -121,7 +121,7 @@ bool Scene::SaveGameToSlot(int slot)
 
 bool Scene::LoadGameFromSlot(int slot)
 {
-	std::string path = "Saves/slot" + std::to_string(slot) + ".xml";
+	std::string path = "slot" + std::to_string(slot) + ".xml";
 	LOG("Cargando slot %d...", slot);
 
 	pugi::xml_document file;
