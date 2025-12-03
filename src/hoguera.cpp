@@ -1,36 +1,62 @@
-#include "Hoguera.h"
+#include "hoguera.h"
 #include "Engine.h"
 #include "Textures.h"
-#include "Physics.h"
 #include "Render.h"
+#include "Physics.h"
 #include "Log.h"
 
 hoguera::hoguera(int x, int y)
-    : Entity(EntityType::UNKNOWN)   // O hacer un nuevo EntityType::HOGUERA si luego quieres
+    : Entity(EntityType::HOGUERA)
 {
     name = "hoguera";
-
     position.setX((float)x);
     position.setY((float)y);
+}
 
-    // ?? CAMBIA la ruta si tu textura tiene otro nombre o está en otra carpeta
+bool hoguera::Awake()
+{
+    return true;
+}
+
+bool hoguera::Start()
+{
+    // Animación
+    std::unordered_map<int, std::string> aliases = { {0,"idle"} };
+    anims.LoadFromTSX("Assets/Textures/hoguera.tsx", aliases);
+    anims.SetCurrent("idle");
+
+    // Textura
     texture = Engine::GetInstance().textures->Load("Assets/Textures/hoguera.png");
 
-    // Creamos un sensor para detectar al jugador
-    pbody = Engine::GetInstance().physics->CreateRectangleSensor(
-        x, y, 32, 32, STATIC);
+    texW = anims.GetCurrentFrame().w;
+    texH = anims.GetCurrentFrame().h;
 
+    // Sensor para detectar al jugador
+    pbody = Engine::GetInstance().physics->CreateRectangleSensor(
+        (int)position.getX(),
+        (int)position.getY(),
+        texW,
+        texH,
+        STATIC
+    );
+
+    pbody->ctype = ColliderType::ITEM; // TU ENGINE NO TIENE SENSOR
     pbody->listener = this;
-    pbody->ctype = ColliderType::SENSOR;
+
+    return true;
 }
 
 bool hoguera::Update(float dt)
 {
-    // Dibujar la hoguera (ajusta el offset si se ve desplazada)
+    anims.Update(dt);
+
+    const SDL_Rect& frame = anims.GetCurrentFrame();
+
     Engine::GetInstance().render->DrawTexture(
         texture,
-        (int)position.getX() - 16,
-        (int)position.getY() - 16
+        (int)position.getX() - texW / 2,
+        (int)position.getY() - texH / 2,
+        &frame
     );
 
     return true;
@@ -38,9 +64,9 @@ bool hoguera::Update(float dt)
 
 void hoguera::OnCollision(PhysBody* physA, PhysBody* physB)
 {
-    if (physA == pbody && physB->ctype == ColliderType::PLAYER)
+    if (physB->ctype == ColliderType::PLAYER)
     {
-        LOG("?? HOGUERA: Jugador ha tocado la hoguera ? Guardando partida (aún fake)");
-        // Aquí haremos el guardado real después
+        LOG("HOGUERA tocada por jugador");
+        // Guardado lo haremos después
     }
 }

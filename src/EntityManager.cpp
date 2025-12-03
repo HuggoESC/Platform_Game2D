@@ -6,6 +6,7 @@
 #include "Log.h"
 #include "Item.h"
 #include "Enemy.h"
+#include "hoguera.h"
 
 EntityManager::EntityManager() : Module()
 {
@@ -78,6 +79,9 @@ std::shared_ptr<Entity> EntityManager::CreateEntity(EntityType type)
 		break;
 	case EntityType::ENEMY:
 		entity = std::make_shared<Enemy>(0, 0);
+		break;
+	case EntityType::HOGUERA:
+		entity = std::make_shared<hoguera>(0, 0);
 		break;
 	default:
 		break;
