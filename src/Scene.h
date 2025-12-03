@@ -5,6 +5,13 @@
 
 struct SDL_Texture;
 
+enum class SaveMode
+{
+	NONE,
+	SAVE_MENU,
+	LOAD_MENU
+};
+
 class Scene : public Module
 {
 public:
@@ -32,8 +39,24 @@ public:
 	// Called before quitting
 	bool CleanUp();
 
+	// Save and Load
+	bool SaveGame();
+	bool LoadGame();
+
+	// Save and Load from a specific slot
+	bool SaveGameToSlot(int slot);
+	bool LoadGameFromSlot(int slot);
+	
+	void ShowLoadNotification(int slot);
+	void DrawLoadNotification();
+
+	SaveMode saveMode = SaveMode::NONE;
+
 private:
 
 	//L03: TODO 3b: Declare a Player attribute
 	std::shared_ptr<Player> player;
+
+	int loadNotificationSlot = 0;
+	float loadNotificationTimer = 0.0f;
 };
