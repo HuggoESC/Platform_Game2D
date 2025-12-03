@@ -1,0 +1,14 @@
+Hugo:
+- Sprites
+- Sonidos
+- Debug mode
+- Tiled
+- Mapa
+
+
+Vladimir:
+- Ataque
+- Movimiento
+- Pathfinding
+- Logica de los enemigos
+- Arreglar bugs
