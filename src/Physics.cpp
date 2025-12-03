@@ -305,11 +305,18 @@ bool Physics::IsPendingToDelete(PhysBody* physBody) {
 }
 
 // --- Velocity helpers
+// --- Velocity helpers
 b2Vec2 Physics::GetLinearVelocity(const PhysBody* p) const
 {
-    if (p == nullptr || B2_IS_NULL(p->body))
+    // 1) Puntero nulo ? velocidad cero
+    if (p == nullptr)
         return b2Vec2{ 0.0f, 0.0f };
 
+    // 2) BodyId nulo o inválido ? velocidad cero
+    if (B2_IS_NULL(p->body) || !b2Body_IsValid(p->body))
+        return b2Vec2{ 0.0f, 0.0f };
+
+    // 3) Body válido ? preguntamos a Box2D
     return b2Body_GetLinearVelocity(p->body);
 }
 
