@@ -87,4 +87,7 @@ private:
 
 	// Last look direction used when no WASD input on attack
 	Vector2D lookDir;
+
+	// List to defer enemy destruction until after iteration completes
+	std::vector<std::shared_ptr<Entity>> enemiesToDestroy;
 };

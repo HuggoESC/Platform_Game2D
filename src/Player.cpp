@@ -1,4 +1,4 @@
-#include "Player.h"
+﻿#include "Player.h"
 #include "Engine.h"
 #include "Textures.h"
 #include "Audio.h"
@@ -9,6 +9,7 @@
 #include "Physics.h"
 #include "EntityManager.h"
 #include "Map.h"
+#include "Enemy.h"
 
 Player::Player() : Entity(EntityType::PLAYER)
 {
@@ -71,7 +72,7 @@ bool Player::Update(float dt)
 		Attack(dt);
 		Draw(dt);
 
-	//Muerte por ca?da (no afecta en GodMode)
+	//Muerte por ca�da (no afecta en GodMode)
 	if (!GodMode)
 	{
 		Vector2D mapSize = Engine::GetInstance().map->GetMapSizeInPixels();
@@ -82,16 +83,16 @@ bool Player::Update(float dt)
 		{
 				LOG("Player died. Respawning...");
 
-				// Reset velocidad f?sica
+				// Reset velocidad f�sica
 				Engine::GetInstance().physics->SetLinearVelocity(pbody, {0.0f,0.0f });
 
 				// Teletransportar al spawn
 				pbody->SetPosition((int)spawnPosition.getX(), (int)spawnPosition.getY());
 
-				// Actualizar valores internos de posici?n
+				// Actualizar valores internos de posici�n
 				position = spawnPosition;
 
-				// Reposicionar c?mara para centrar al jugador tras el respawn
+				// Reposicionar c�mara para centrar al jugador tras el respawn
 				Engine::GetInstance().render->camera.x = -position.getX() + Engine::GetInstance().render->camera.w /14;
 				Engine::GetInstance().render->camera.y = -position.getY() + Engine::GetInstance().render->camera.h *9 /10;
 
@@ -258,6 +259,36 @@ void Player::Attack(float dt) {
 		attackPos.setX(attackPos.getX() + attackDir.getX() * move);
 		attackPos.setY(attackPos.getY() + attackDir.getY() * move);
 
+		LOG("Attack active at (%.1f, %.1f), remaining: %.1f", attackPos.getX(), attackPos.getY(), attackRemaining);
+
+		// Check for enemy hits during attack
+		float attackHitRange = 20.0f; // pixels to check around attack position
+		for (const auto& entity : Engine::GetInstance().entityManager->entities) {
+			if (entity->type == EntityType::ENEMY) {
+				Enemy* enemy = dynamic_cast<Enemy*>(entity.get());
+				if (enemy) {
+					float ex = enemy->position.getX();
+					float ey = enemy->position.getY();
+					float dx = attackPos.getX() - ex;
+					float dy = attackPos.getY() - ey;
+					float dist = std::sqrt(dx * dx + dy * dy);
+					LOG("Enemy at (%.1f, %.1f), distance: %.1f", ex, ey, dist);
+					
+					if (enemy->IsHitByAttack(attackPos.getX(), attackPos.getY(), attackHitRange)) {
+						LOG("ENEMY HIT! Destroying enemy!");
+						// Defer destruction until after the loop completes
+						enemiesToDestroy.push_back(entity);
+					}
+				}
+			}
+		}
+
+		// After checking all enemies, destroy the ones that were hit
+		for (const auto& enemy : enemiesToDestroy) {
+			enemy->Destroy();
+		}
+		enemiesToDestroy.clear();
+
 		if (attackRemaining <=0.0f) {
 			attackActive = false;
 		}
@@ -267,7 +298,12 @@ void Player::Attack(float dt) {
 	// Start attack when E pressed
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_E) == KEY_DOWN) {
 		// Only allow attacks after picking up the Daga
-		if (!canAttack) return;
+		if (!canAttack) {
+			LOG("Cannot attack - no Daga picked up");
+			return;
+		}
+
+		LOG("Attack started!");
 
 		// Determine direction from WASD (use current input, allow diagonals)
 		int dx =0, dy =0;

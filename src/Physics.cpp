@@ -1,4 +1,4 @@
-#include "Physics.h"
+﻿#include "Physics.h"
 #include "Input.h"
 #include "Engine.h"
 #include "Log.h"
@@ -254,7 +254,12 @@ void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
     PhysBody* physB = BodyToPhys(bodyB);
     if (!physA || !physB) return;                  // user data cleared
 
-    if (physA->listener && !IsPendingToDelete(physA)) physA->listener->OnCollision(physA, physB);
+    if (physA->listener && 
+        !IsPendingToDelete(physA) && 
+        physA->listener->active)  // ← Проверка, что listener активен
+    {
+        physA->listener->OnCollision(physA, physB);
+    }
     if (physB->listener && !IsPendingToDelete(physB)) physB->listener->OnCollision(physB, physA);
 
     LOG("CONTACT --> A:%d  B:%d", (int)physA->ctype, (int)physB->ctype); //PRUEBA   
@@ -284,8 +289,8 @@ void Physics::DeletePhysBody(PhysBody* physBody)
 	if (B2_IS_NULL(world)) return; // world already destroyed
     if (physBody && !B2_IS_NULL(physBody->body) && physBody->listener->active)
     {
-        // Don�t change contact/sensor flags here (can mismatch event buffers).
-        // Just clear user data so late events won�t dereference a dangling PhysBody*.
+        // Don’t change contact/sensor flags here (can mismatch event buffers).
+        // Just clear user data so late events won’t dereference a dangling PhysBody*.
         b2Body_SetUserData(physBody->body, nullptr);
     }
     bodiesToDelete.push_back(physBody);

@@ -159,6 +159,10 @@ bool Enemy::Update(float dt)
  int px, py;
  pbody->GetPosition(px, py);
 
+ // Update position from physics body
+ position.setX((float)px);
+ position.setY((float)py);
+
  // Update sensors to follow the body
  if (sensorFront) sensorFront->SetPosition(px + (int)sensorOffset * direction, py);
  if (sensorBack) sensorBack->SetPosition(px - (int)sensorOffset * direction, py);
@@ -294,4 +298,12 @@ void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
  patrolFlipTimer = patrolFlipCooldown; // avoid immediate flip back
  LOG("SLIME: cambio de dirección");
  }
+}
+
+bool Enemy::Destroy()
+{
+	LOG("Destroying enemy");
+	active = false;
+	Engine::GetInstance().entityManager->DestroyEntity(shared_from_this());
+	return true;
 }

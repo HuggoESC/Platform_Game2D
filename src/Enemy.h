@@ -15,6 +15,7 @@ public:
 
 	bool Update(float dt) override; // dt en milisegundos
 	void OnCollision(PhysBody* physA, PhysBody* physB) override; // dt en milisegundos
+	bool Destroy() override;
 
 	void SetPosition(int x, int y)
 	{
@@ -25,10 +26,21 @@ public:
 			pbody->SetPosition((float)x, (float)y);
 	}
 
+	// Check if enemy is hit by attack at given position and range
+	bool IsHitByAttack(float attackX, float attackY, float attackRange) const
+	{
+		float ex = position.getX();
+		float ey = position.getY();
+		float dx = attackX - ex;
+		float dy = attackY - ey;
+		float dist = std::sqrt(dx * dx + dy * dy);
+		return dist <= attackRange;
+	}
+
 private:
 	AnimationSet animations; // Conjunto de animaciones del enemigo
 	SDL_Texture* texture = nullptr; // Textura del enemigo
-	PhysBody* pbody = nullptr; // Cuerpo físico del enemigo
+	PhysBody* pbody = nullptr; // Cuerpo f?sico del enemigo
 	PhysBody* sensorFront = nullptr; // Sensor frontal
 	PhysBody* sensorBack = nullptr; // Sensor trasero
 	float sensorOffset =16.0f; // Distancia del sensor al centro del enemigo 
