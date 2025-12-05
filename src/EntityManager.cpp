@@ -23,7 +23,7 @@ bool EntityManager::Awake()
 	LOG("Loading Entity Manager");
 	bool ret = true;
 
-	//Iterates over the entities and calls the Awake
+	// Iterates over the entities and calls the Awake
 	for(const auto entity : entities)
 	{
 		if (entity->active == false) continue;
@@ -38,7 +38,7 @@ bool EntityManager::Start() {
 
 	bool ret = true; 
 
-	//Iterates over the entities and calls Start
+	// Iterates over the entities and calls Start
 	for(const auto entity : entities)
 	{
 		if (entity->active == false) continue;
@@ -68,7 +68,7 @@ std::shared_ptr<Entity> EntityManager::CreateEntity(EntityType type)
 {
 	std::shared_ptr<Entity> entity = nullptr;
 
-	//L04: TODO 3a: Instantiate entity according to the type and add the new entity to the list of Entities
+	// Instantiate entity according to the type and add the new entity to the list of Entities
 	switch (type)
 	{
 	case EntityType::PLAYER:

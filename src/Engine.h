@@ -24,7 +24,7 @@ public:
 	// Public method to get the instance of the Singleton
 	static Engine& GetInstance();
 
-	//	
+	// Method to destroy the instance of the Singleton
 	void AddModule(std::shared_ptr<Module> module);
 
 	// Called before render is available
@@ -93,10 +93,8 @@ public:
 	std::shared_ptr<Textures> textures;
 	std::shared_ptr<Audio> audio;
 	std::shared_ptr<Scene> scene;
-	// L04: TODO 1: Add the EntityManager Module to the Engine
 	std::shared_ptr<EntityManager> entityManager;
 	std::shared_ptr<Map> map;
-	// L08: TODO 2: Add Physics module
 	std::shared_ptr<Physics> physics;
 
 
@@ -125,7 +123,7 @@ private:
 
 	std::string gameTitle = "Platformer Game";
 
-	//L05 TODO 2: Declare a xml_document to load the config file
+	// Declare a xml_document to load the config file
 	pugi::xml_document configFile;
 
 };

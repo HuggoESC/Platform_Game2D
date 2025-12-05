@@ -6,11 +6,12 @@ Audio::Audio() {
 }
 
 Audio::~Audio() {
-    // Make sure everything is freed in CleanUp
+    
+
 }
 
 bool Audio::LoadWavFile(const char* path, SoundData& out) {
-    // SDL_LoadWAV fills spec + allocates buf; free with SDL_free() later.
+   
     if (!SDL_LoadWAV(path, &out.spec, &out.buf, &out.len)) {
         SDL_Log("SDL_LoadWAV failed for %s: %s", path, SDL_GetError());
         return false;
@@ -42,7 +43,6 @@ bool Audio::EnsureDeviceOpen() {
         return false;
     }
 
-    // Query actual device format (may differ from 'want')
     if (!SDL_GetAudioDeviceFormat(device_, &device_spec_, nullptr)) {
         LOG("Audio: SDL_GetAudioDeviceFormat failed: %s", SDL_GetError());
         SDL_CloseAudioDevice(device_);
@@ -96,7 +96,7 @@ bool Audio::Awake() {
     if (SDL_InitSubSystem(SDL_INIT_AUDIO) != true /* SDL3 returns bool */) {
         LOG("SDL_INIT_AUDIO failed: %s", SDL_GetError());
         active = false;
-        return true; // don't hard-fail the app
+        return true; 
     }
 
     if (!EnsureDeviceOpen()) {
@@ -191,7 +191,7 @@ int Audio::LoadFx(const char* path) {
     }
 
     sfx_.push_back(s);
-    return static_cast<int>(sfx_.size()); // 1-based outward index
+    return static_cast<int>(sfx_.size()); 
 }
 
 bool Audio::PlayFx(int id, int repeat) {

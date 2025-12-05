@@ -10,6 +10,7 @@
 #include "EntityManager.h"
 #include "Map.h"
 #include "Enemy.h"
+#include "Window.h"
 
 Player::Player() : Entity(EntityType::PLAYER)
 {
@@ -22,7 +23,7 @@ Player::~Player() {
 
 bool Player::Awake() {
 
-	//L03: TODO2: Initialize Player parameters
+	// Initialize Player parameters
 	position = Vector2D(96,650);
 	spawnPosition = position;
 
@@ -40,23 +41,37 @@ bool Player::Start() {
 	anims.LoadFromTSX("Assets/Textures/satiro-Sheet v1.1.tsx", aliases);
 	anims.SetCurrent("idle");
 
-	//L03: TODO2: Initialize Player parameters
+	// Initialize Player parameters 
 	texture = Engine::GetInstance().textures->Load("Assets/Textures/satiro-Sheet v1.1.png");
+	lifeTexture = Engine::GetInstance().textures->Load("Assets/Textures/Vida.png");
+	Engine::GetInstance().textures->GetSize(lifeTexture, lifeTexW, lifeTexH);
 
-	// L08 TODO5: Add physics to the player - initialize physics body
-	//Engine::GetInstance().textures->GetSize(texture, texW, texH);
+	std::unordered_map<int, std::string> lifeAliases = { 
+		{0,"life_1"},
+		{1,"life_2"},
+		{2,"life_3"},
+		{3,"life_4"} 
+	};
+
+	lifeAnims.LoadFromTSX("Assets/Textures/Vida.tsx", lifeAliases);
+
+	lives = 1;
+	UpdateLifeAnimation();
+
+	// Add physics to the player - initialize physics body
 	texW =32;
 	texH =32;
 	pbody = Engine::GetInstance().physics->CreateCircle((int)position.getX(), (int)position.getY(), texW /2, bodyType::DYNAMIC);
 
-	// L08 TODO6: Assign player class (using "this") to the listener of the pbody. This makes the Physics module to call the OnCollision method
+	// Assign player class (using "this") to the listener of the pbody. This makes the Physics module to call the OnCollision method
 	pbody->listener = this;
 
-	// L08 TODO7: Assign collider type
+	// Assign collider type
 	pbody->ctype = ColliderType::PLAYER;
 
-	//initialize audio effect
+	// initialize audio effect
 	pickCoinFxId = Engine::GetInstance().audio->LoadFx("Assets/Audio/Fx/coin-collision-sound-342335.wav");
+	pickliveFxId = Engine::GetInstance().audio->LoadFx("Assets/Audio/Fx/life_pickup.wav");
 
 	return true;
 }
@@ -72,7 +87,7 @@ bool Player::Update(float dt)
 		Attack(dt);
 		Draw(dt);
 
-	//Muerte por ca�da (no afecta en GodMode)
+	// Muerte por caida (no afecta en GodMode)
 	if (!GodMode)
 	{
 		Vector2D mapSize = Engine::GetInstance().map->GetMapSizeInPixels();
@@ -83,7 +98,7 @@ bool Player::Update(float dt)
 		{
 				LOG("Player died. Respawning...");
 
-				// Reset velocidad f�sica
+				// Reset velocidad fisica
 				Engine::GetInstance().physics->SetLinearVelocity(pbody, {0.0f,0.0f });
 
 				// Teletransportar al spawn
@@ -122,8 +137,7 @@ void Player::Teleport() {
 }
 
 void Player::GetPhysicsValues() {
-	// Read current velocity
-	velocity = Engine::GetInstance().physics->GetLinearVelocity(pbody);
+	velocity = Engine::GetInstance().physics->GetLinearVelocity(pbody);	// Read current velocity
 	velocity = {0, velocity.y }; // Reset horizontal velocity by default, this way the player stops when no key is pressed
 }
 
@@ -207,6 +221,7 @@ void Player::Jump()
 	}
 }
 
+// Dash implementation
 void Player::Dash() {
  if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_LSHIFT) == KEY_DOWN && !isDashing && canDash == true) {
  isDashing = true;
@@ -216,6 +231,7 @@ void Player::Dash() {
  }
 }
 
+// Apply physics based on current state
 void Player::ApplyPhysics() {
  if (isDashing) {
  if (!isDecelerating) {
@@ -248,6 +264,8 @@ void Player::ApplyPhysics() {
  // Apply velocity via helper
  Engine::GetInstance().physics->SetLinearVelocity(pbody, velocity);
 }
+
+// Attack implementation
 void Player::Attack(float dt) {
 	// dt is in milliseconds
 	// If attack already active -> advance it
@@ -360,6 +378,7 @@ void Player::Attack(float dt) {
 	}
 }
 
+// Draw the player
 void Player::Draw(float dt) {
 
 	anims.Update(dt);
@@ -424,8 +443,31 @@ void Player::Draw(float dt) {
 		Engine::GetInstance().render->DrawLine(ax, ay, bx_i, by_i,255,255,255,255, true);
 		Engine::GetInstance().render->DrawLine(bx_i, by_i, tipx, tipy,255,255,255,255, true);
 	}
+
+	if (lifeTexture) {
+		const int hudScreenX = 20;	
+		const int hudScreenY = 20;
+
+		int scale = Engine::GetInstance().window->GetScale();
+		int camX = Engine::GetInstance().render->camera.x;
+		int cmaY = Engine::GetInstance().render->camera.y;
+
+		int worldX = (hudScreenX - camX) / scale;
+		int worldY = (hudScreenY - cmaY) / scale;
+
+		SDL_Rect lifeFrame = lifeAnims.GetCurrentFrame();
+
+		Engine::GetInstance().render->DrawTexture(
+			lifeTexture,
+			worldX,
+			worldY,
+			&lifeFrame
+		);
+	}
+
 }
 
+// Called before quitting
 bool Player::CleanUp()
 {
 	LOG("Cleanup player");
@@ -433,7 +475,7 @@ bool Player::CleanUp()
 	return true;
 }
 
-// L08 TODO6: Define OnCollision function for the player. 
+// Define OnCollision function for the player. 
 void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 
 	if (GodMode) return;
@@ -442,8 +484,7 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 	{
 	case ColliderType::PLATFORM:
 	case ColliderType::TOPE:
-		LOG("Collision GROUND (PLATFORM/TOPE)");
-		// Estamos TOCANDO SUELO
+		LOG("Collision GROUND (PLATFORM/TOPE)"); // Estamos TOCANDO SUELO
 		onGround = true;
 		isJumping = false;
 		isDashing = false;
@@ -461,8 +502,14 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		canAttack = true;
 		break;
 
+	case ColliderType::LIFEUP:
+		LOG("Collision LIFEUP");
+		Engine::GetInstance().audio->PlayFx(pickliveFxId);
+		break;
+
 	case ColliderType::ENEMY:
 		LOG("Collision ENEMY - Respawning!");
+
 		// Reset velocidad física
 		Engine::GetInstance().physics->SetLinearVelocity(pbody, {0.0f, 0.0f});
 
@@ -482,6 +529,9 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		isDashing = false;
 		canDash = true;
 		jumpCount = 0;
+
+		RemoveLife();
+
 		break;
 
 	case ColliderType::UNKNOWN:
@@ -493,6 +543,7 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 	}
 }
 
+// Define OnCollisionEnd function for the player.
 void Player::OnCollisionEnd(PhysBody* physA, PhysBody* physB)
 {
 	if (GodMode) return;
@@ -517,4 +568,50 @@ void Player::OnCollisionEnd(PhysBody* physA, PhysBody* physB)
 		break;
 	}
 }
+
+// Life management
+void Player::UpdateLifeAnimation() { // update the life animation based on current lives
+
+	if (lives < 0) lives = 0;
+	if (lives > maxLives) lives = maxLives;
+
+	std::string animName;
+
+	if (lives >= 4) animName = "life_4";
+	else if (lives == 3) animName = "life_3";
+	else if (lives == 2) animName = "life_2";
+	else animName = "life_1"; 
+
+	if (lifeAnims.Has(animName)) {
+		lifeAnims.SetCurrent(animName);
+	}
+}
+void Player::AddLife() { // called when the player picks a life item
+
+	if (lives >= maxLives)
+		return;
+	
+	lives++;
+	UpdateLifeAnimation();
+}
+
+void Player::RemoveLife() { // called when the player is hit
+	
+	if (lives <= 0)
+		return;
+
+	lives--;
+	UpdateLifeAnimation();
+
+	if (lives <= 0) {
+		Engine::GetInstance().scene->TriggerGameOver();
+	}
+}
+
+void Player::ResetLivesAfterGameOver() { // reset lives to initial value after game over
+
+	lives = 1;
+	UpdateLifeAnimation();
+}
+
 

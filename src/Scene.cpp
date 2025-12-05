@@ -13,6 +13,7 @@
 #include "Item.h"
 #include "Enemy.h"
 
+
 Scene::Scene() : Module()
 {
 	name = "scene";
@@ -28,10 +29,10 @@ bool Scene::Awake()
 	LOG("Loading Scene");
 	bool ret = true;
 
-	//L04: TODO 3b: Instantiate the player using the entity manager
+	// Instantiate the player using the entity manager
 	player = std::dynamic_pointer_cast<Player>(Engine::GetInstance().entityManager->CreateEntity(EntityType::PLAYER));
 	
-	//L08: TODO 4: Create a new item using the entity manager and set the position to (200, 672) to test
+	// Create a new item using the entity manager and set the position to (200, 672) to test
 	std::shared_ptr<Item> item = std::dynamic_pointer_cast<Item>(Engine::GetInstance().entityManager->CreateEntity(EntityType::ITEM));
 	item->position = Vector2D(640, 480);
 
@@ -56,7 +57,7 @@ bool Scene::PreUpdate()
 // Called each loop iteration
 bool Scene::Update(float dt)
 {
-	//L03 TODO 3: Make the camera movement independent of framerate
+	// Make the camera movement independent of framerate
 	float camSpeed = 1;
 
 	if(Engine::GetInstance().input->GetKey(SDL_SCANCODE_UP) == KEY_REPEAT)
@@ -183,6 +184,38 @@ void Scene::DrawLoadNotification()
 	}
 }
 
+void Scene::TriggerGameOver() 
+{
+	gameOverActive = true;
+	gameOverTimer = 2.0f;
+}
+
+void Scene::DrawGameOver()
+{
+	if (!gameOverActive)
+		return;
+
+	float dtSec = Engine::GetInstance().GetDt() / 1000.0f;
+	gameOverTimer -= dtSec;
+
+	int w, h;
+	Engine::GetInstance().window->GetWindowSize(w, h);
+
+	SDL_Rect rec = { 0, 0, w, h };
+
+	Engine::GetInstance().render->DrawRectangle(rec, 0, 0, 0, 255, true, false);
+
+	if (gameOverTimer <= 0.0f)
+	{
+		gameOverActive = false;
+
+		if (player)
+		{
+			player->ResetLivesAfterGameOver();
+		}
+	}
+}
+
 // Called each loop iteration
 bool Scene::PostUpdate()
 {
@@ -190,6 +223,7 @@ bool Scene::PostUpdate()
 
 	// Mostrar notificación de carga durante X segundos
 	DrawLoadNotification();
+	DrawGameOver();
 
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_ESCAPE) == KEY_DOWN)
 		ret = false;

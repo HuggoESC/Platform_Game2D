@@ -129,7 +129,7 @@ static bool BFS_FindWalkTarget(Map* map, int startRow, int startCol, int maxRadi
  return false;
 }
 
-// New helper to search for player entity within radius (tile radius) - returns true and fills player's tile if found
+// Helper to find player entity within radius (in tiles) from startRow/startCol
 static bool FindPlayerInRadius(int startRow, int startCol, Map* map, int radius, int& outRow, int& outCol)
 {
  // iterate entities and find player position
@@ -182,7 +182,7 @@ bool Enemy::Update(float dt)
  int startRow =0, startCol =0;
  map->WorldToMap(px, py, startRow, startCol);
 
- // First: try to find player in detection radius
+ // Patrol check: see if stuck
  int prow = -1, pcol = -1;
  bool playerFound = FindPlayerInRadius(startRow, startCol, map, detectionRadiusTiles, prow, pcol);
 
@@ -281,6 +281,7 @@ bool Enemy::Update(float dt)
  return true;
 }
 
+// Collision handling
 void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
 {
  // Consideramos sólido todo lo que no sea jugador, sensor o desconocido
@@ -300,6 +301,7 @@ void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
  }
 }
 
+// Destroy enemy
 bool Enemy::Destroy()
 {
 	LOG("Destroying enemy");

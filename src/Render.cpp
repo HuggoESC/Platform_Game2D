@@ -30,9 +30,6 @@ bool Render::Awake()
 	int scale = Engine::GetInstance().window->GetScale();
 	SDL_Window* window = Engine::GetInstance().window->window;
 
-	//L05 TODO 5 - Load the configuration of the Render module
-	
-	// SDL3: no flags; create default renderer and set vsync separately
 	renderer = SDL_CreateRenderer(window, nullptr);
 
 	if (renderer == NULL)
@@ -118,8 +115,6 @@ void Render::ResetViewPort()
 }
 
 // Blit to screen
-
-// Blit to screen (VERSIÓN ORIGINAL SIN flipX)
 bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* section, float speed, double angle, int pivotX, int pivotY) const
 {
 	bool ret = true;

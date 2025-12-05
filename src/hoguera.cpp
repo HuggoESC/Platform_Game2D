@@ -40,7 +40,7 @@ bool hoguera::Start()
         STATIC
     );
 
-    pbody->ctype = ColliderType::ITEM; // TU ENGINE NO TIENE SENSOR
+    pbody->ctype = ColliderType::ITEM; 
     pbody->listener = this;
 
     return true;

@@ -4,7 +4,6 @@ class Timer
 {
 public:
 
-	// Constructor
 	Timer();
 
 	void Start();

@@ -19,7 +19,7 @@ Physics::Physics() : Module()
 // Destructor
 Physics::~Physics()
 {
-    // You should do some memory cleaning here, if required
+    
 }
 
 bool Physics::Start()
@@ -41,11 +41,11 @@ bool Physics::PreUpdate()
     bool ret = true;
 
     // Step (update) the World
-    // Get the dt from the engine. Note that dt is in milliseconds and Box2D steps in seconds
+    // Get the dt from the engine
     float dt = Engine::GetInstance().GetDt() / 1000.0f;
     b2World_Step(world, dt, 4);
 
-    // --- Sensor overlaps 
+    // Sensor overlaps 
     const b2SensorEvents sensorEvents = b2World_GetSensorEvents(world);
     for (int i = 0; i < sensorEvents.beginCount; ++i)
     {
@@ -60,7 +60,7 @@ bool Physics::PreUpdate()
         EndContact(e.sensorShapeId, e.visitorShapeId);
     }
 
-    // --- Contacts (non-sensor) ---
+    // Contacts
     const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
     for (int i = 0; i < contactEvents.beginCount; ++i)
     {
@@ -137,7 +137,7 @@ PhysBody* Physics::CreateRectangleSensor(int x, int y, int width, int height, bo
     b2Polygon box = b2MakeBox(PIXEL_TO_METERS(width) * 0.5f, PIXEL_TO_METERS(height) * 0.5f);
     b2ShapeDef sdef = b2DefaultShapeDef();
     sdef.density = 1.0f;
-    sdef.isSensor = true; // 3.x sensor flag is on the shape def
+    sdef.isSensor = true; 
     sdef.enableContactEvents = true;
     sdef.enableSensorEvents = true;
 
@@ -179,7 +179,7 @@ PhysBody* Physics::CreateChain(int x, int y, int* points, int size, bodyType typ
     return pbody;
 }
 
-// 
+// PostUpdate
 bool Physics::PostUpdate()
 {
     bool ret = true;
@@ -195,12 +195,10 @@ bool Physics::PostUpdate()
         {
             b2DebugDraw dd = {};
             dd.context = this;
-
-            // Enable only what you support (3.1 field names)
             dd.drawShapes = true;
-            dd.drawJoints = true;   // enable if you want joints drawn
-            dd.drawBounds = true;   // AABBs
-            dd.drawContacts = true;   // contact points
+            dd.drawJoints = true;   
+            dd.drawBounds = true;   
+            dd.drawContacts = true;  
 
             // Implemented callbacks
             dd.DrawSegmentFcn = &Physics::DrawSegmentCb;
@@ -209,8 +207,8 @@ bool Physics::PostUpdate()
             dd.DrawCircleFcn = &Physics::DrawCircleCb;
             dd.DrawSolidCircleFcn = &Physics::DrawSolidCircleCb;
 
-            // Defensive stubs (prevent nullptr calls inside Box2D)
-            dd.DrawSolidCapsuleFcn = &Physics::DrawSolidCapsuleStub; // correct 3.1 signature (p1,p2,radius,...) :contentReference[oaicite:1]{index=1}
+            // Defensive stubs
+            dd.DrawSolidCapsuleFcn = &Physics::DrawSolidCapsuleStub; 
             dd.DrawPointFcn = &Physics::DrawPointStub;
             dd.DrawStringFcn = &Physics::DrawStringStub;
             dd.DrawTransformFcn = &Physics::DrawTransformStub;
@@ -289,8 +287,6 @@ void Physics::DeletePhysBody(PhysBody* physBody)
 	if (B2_IS_NULL(world)) return; // world already destroyed
     if (physBody && !B2_IS_NULL(physBody->body) && physBody->listener->active)
     {
-        // Don’t change contact/sensor flags here (can mismatch event buffers).
-        // Just clear user data so late events won’t dereference a dangling PhysBody*.
         b2Body_SetUserData(physBody->body, nullptr);
     }
     bodiesToDelete.push_back(physBody);
@@ -309,7 +305,7 @@ bool Physics::IsPendingToDelete(PhysBody* physBody) {
     return pendingToDelete;
 }
 
-// --- Velocity helpers
+// Velocity helpers
 b2Vec2 Physics::GetLinearVelocity(const PhysBody* p) const
 {
     return b2Body_GetLinearVelocity(p->body);
@@ -350,17 +346,14 @@ void Physics::SetYVelocity(PhysBody* p, float vy) const
     b2Body_SetLinearVelocity(p->body, v);
 }
 
-// --- Impulse helper
+//  Impulse helper
 void Physics::ApplyLinearImpulseToCenter(PhysBody* p, float ix, float iy, bool wake) const
 {
     b2Vec2 imp = { ix, iy };
     b2Body_ApplyLinearImpulseToCenter(p->body, imp, wake);
 }
 
-//
-//--------------- PhysBody --------------------
-//
-
+// PhysBody methods
 void PhysBody::GetPosition(int& x, int& y) const
 {
     b2Vec2 pos = b2Body_GetPosition(body);
@@ -422,7 +415,7 @@ int PhysBody::RayCast(int x1, int y1, int x2, int y2, float& normal_x, float& no
     return int(floorf(res.fraction * distPixels));
 }
 
-// --- helpers
+//  helpers
 
 b2BodyType Physics::ToB2Type(bodyType t)
 {
@@ -435,7 +428,7 @@ b2BodyType Physics::ToB2Type(bodyType t)
     }
 }
 
-// --- Debug draw callbacks (map to your Render)
+//  Debug draw callbacks
 
 void Physics::DrawSegmentCb(b2Vec2 p1, b2Vec2 p2, b2HexColor /*color*/, void* /*ctx*/)
 {
@@ -481,7 +474,7 @@ void Physics::DrawSolidCircleCb(b2Transform xf, float radius, b2HexColor color, 
     DrawCircleCb(xf.p, radius, color, ctx);
 }
 
-// ---- No-op stubs to avoid null calls -----------------------
+// No-op stubs to avoid null calls 
 void Physics::DrawSolidCapsuleStub(b2Vec2, b2Vec2, float, b2HexColor, void*) {}
 void Physics::DrawPointStub(b2Vec2, float, b2HexColor, void*) {}
 void Physics::DrawStringStub(b2Vec2, const char*, b2HexColor, void*) {}

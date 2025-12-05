@@ -25,16 +25,12 @@ bool Item::Start() {
 	//initilize textures
 	textureDaga = Engine::GetInstance().textures->Load("Assets/Textures/Daga.png");
 	
-	// L08 TODO 4: Add a physics to an item - initialize the physics body
 	Engine::GetInstance().textures.get()->GetSize(textureDaga, texW, texH);
 	pbody = Engine::GetInstance().physics->CreateCircle((int)position.getX() + texH / 2, (int)position.getY() + texH / 2, texH / 2, bodyType::DYNAMIC);
 
-	// L08 TODO 7: Assign collider type
 	pbody->ctype = ColliderType::ITEM;
 
-	// Set this class as the listener of the pbody
-	pbody->listener = this;   // so Begin/EndContact can call back to Item
-
+	pbody->listener = this;   
 	return true;
 }
 
@@ -42,7 +38,6 @@ bool Item::Update(float dt)
 {
 	if (!active) return true;
 
-	// L08 TODO 4: Add a physics to an item - update the position of the object from the physics.  
 	int x, y;
 	pbody->GetPosition(x, y);
 	position.setX((float)x);

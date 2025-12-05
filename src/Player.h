@@ -23,34 +23,26 @@ public:
 
 	bool CleanUp();
 
-	// L08 TODO 6: Define OnCollision function for the player. 
+	// Define OnCollision function for the player. 
 	void OnCollision(PhysBody* physA, PhysBody* physB);
 	void OnCollisionEnd(PhysBody* physA, PhysBody* physB);
 
-private:
+	// Life management
+	void AddLife();
+	void RemoveLife();
+	void ResetLivesAfterGameOver();
 
-	Vector2D spawnPosition;
-	void GetPhysicsValues();
-	void Move();
-	void Jump();
-	void Dash();
-	void Attack(float dt);
-	void Teleport();
-	void ApplyPhysics();
-	void Draw(float dt);
-
-public:
-
-	//Declare player parameters
+	// Declare player parameters
 	float speed = 4.0f;
 	SDL_Texture* texture = NULL;
 
 	int texW, texH;
 
-	//Audio fx
+	// Audio fx
 	int pickCoinFxId;
+	int pickliveFxId;
 
-	// L08 TODO 5: Add physics to the player - declare a Physics body
+	// Add physics to the player - declare a Physics body
 	PhysBody* pbody;
 	float jumpForce = 2.5f; // The force to apply when jumping
 	float dashForce = 50.0f; // The force to apply when dashing
@@ -65,10 +57,33 @@ public:
 	// New: only allow attack after picking Daga
 	bool canAttack = false;
 
-private: 
+private:
+
+	Vector2D spawnPosition;
+	void GetPhysicsValues();
+	void Move();
+	void Jump();
+	void Dash();
+	void Attack(float dt);
+	void Teleport();
+	void ApplyPhysics();
+	void Draw(float dt);
+	void UpdateLifeAnimation();
+
 	b2Vec2 velocity;
 	AnimationSet anims;
 
+	// Life state
+	int lives = 1;
+	const int maxLives = 4;
+
+	// Hud life animation
+	SDL_Texture* lifeTexture = nullptr;
+	AnimationSet lifeAnims;
+	int lifeTexW = 0;
+	int lifeTexH = 0;
+
+	// Dash state
 	float currentDashSpeed = 0.0f;    
     float maxDashSpeed = 10.0f;       
     float dashAcceleration = 2.0f;   

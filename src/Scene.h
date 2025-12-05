@@ -50,13 +50,20 @@ public:
 	void ShowLoadNotification(int slot);
 	void DrawLoadNotification();
 
+	void TriggerGameOver();
+	void DrawGameOver();
+
 	SaveMode saveMode = SaveMode::NONE;
 
 private:
 
-	//L03: TODO 3b: Declare a Player attribute
+	// Declare a Player attribute
 	std::shared_ptr<Player> player;
 
 	int loadNotificationSlot = 0;
 	float loadNotificationTimer = 0.0f;
+
+	bool gameOverActive = false;
+	float gameOverTimer = 0.0f;
+
 };

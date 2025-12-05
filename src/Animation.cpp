@@ -2,8 +2,6 @@
 #include <pugixml.hpp>
 #include <cstdio>
 
-// ---------- Animation ----------
-
 SDL_Rect Animation::kEmpty_{ 0,0,0,0 };
 
 Animation::Animation() {}
@@ -53,7 +51,6 @@ const SDL_Rect& Animation::GetCurrentFrame() const {
 
 int Animation::GetFrameCount() const { return static_cast<int>(frames_.size()); }
 
-// ---------- AnimationSet ----------
 
 AnimationSet::AnimationSet() {}
 
@@ -121,8 +118,8 @@ bool AnimationSet::LoadFromTSX(const char* tsxPath,
 }
 
 void AnimationSet::SetCurrent(const std::string& name) {
-    if (currentName_ == name) return; // no change
-    if (!Has(name)) return;           // unknown name
+    if (currentName_ == name) return; 
+    if (!Has(name)) return;           
     currentName_ = name;
     clips_[currentName_].Reset();
 }
