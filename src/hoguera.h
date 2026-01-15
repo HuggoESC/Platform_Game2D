@@ -23,6 +23,8 @@ private:
     PhysBody* pbody = nullptr;
     AnimationSet anims;
 
+    bool activated = false; 
+
     int texW = 32;
     int texH = 32;
 };

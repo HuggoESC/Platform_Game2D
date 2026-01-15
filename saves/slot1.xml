@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<save>
+	<player x="1552" y="400" hp="3" maxHp="5" spawn_x="1583" spawn_y="400" />
+	<camera x="-765" y="0" />
+	<entities>
+		<entity type="ENEMY" x="1575" y="690" />
+		<entity type="ENEMY" x="1955" y="114" />
+		<entity type="ENEMY" x="678" y="690" />
+		<entity type="ENEMY" x="124" y="146" />
+		<entity type="LIFEUP" x="1406" y="384" />
+	</entities>
+</save>

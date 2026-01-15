@@ -7,6 +7,7 @@
 #include "Render.h"
 #include "Player.h"
 #include "Window.h"
+#include "Scene.h"
 #include <vector>
 #include <box2d/box2d.h>
 
@@ -41,6 +42,9 @@ bool Physics::Start()
 bool Physics::PreUpdate()
 {
     bool ret = true;
+
+    if (Engine::GetInstance().scene->IsPaused())
+        return true;
 
     // Step (update) the World
     // Get the dt from the engine

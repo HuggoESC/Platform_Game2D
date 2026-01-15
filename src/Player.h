@@ -12,6 +12,8 @@ class Player : public Entity
 public:
 
 	Player();
+
+	Vector2D spawnPosition;
 	
 	virtual ~Player();
 
@@ -28,9 +30,12 @@ public:
 	void OnCollisionEnd(PhysBody* physA, PhysBody* physB);
 
 	// Life management
-	void AddLife();
-	void RemoveLife();
+	void ApplyLifeUp(int amount = 1);
 	void ResetLivesAfterGameOver();
+
+	int hp = 4; 
+	int maxHp = 4;
+	static const int MAX_HP = 12; 
 
 	// Declare player parameters
 	float speed = 4.0f;
@@ -59,7 +64,6 @@ public:
 
 private:
 
-	Vector2D spawnPosition;
 	void GetPhysicsValues();
 	void Move();
 	void Jump();
@@ -72,10 +76,6 @@ private:
 
 	b2Vec2 velocity;
 	AnimationSet anims;
-
-	// Life state
-	int lives = 1;
-	const int maxLives = 4;
 
 	// Hud life animation
 	SDL_Texture* lifeTexture = nullptr;
@@ -99,6 +99,15 @@ private:
 	float attackSpeed = 300.0f;  // pixels per second (tweakable)
 	int attackLength = 24;        // visual triangle length in pixels
 	int attackHalfWidth = 4;     // half base width in pixels
+
+	//Invencibility
+	bool invulnerable = false;
+	float invulnTimer = 0.0f;          // en segundos
+	const float invulnDuration = 0.9f; // 0.7–1.0 se siente bien
+
+	bool blinkVisible = true;
+	float blinkTimer = 0.0f;
+	const float blinkInterval = 0.08f; // parpadeo
 
 	// Last look direction used when no WASD input on attack
 	Vector2D lookDir;

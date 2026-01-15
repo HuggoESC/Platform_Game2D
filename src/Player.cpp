@@ -57,7 +57,8 @@ bool Player::Start() {
 	lifeAnims.LoadFromTSX("Assets/Textures/Vida.tsx", lifeAliases);
 
 	// Empieza con vida completa:
-	lives = maxLives;
+	hp = 4;
+	maxHp = 4;
 	UpdateLifeAnimation();
 
 	// Add physics to the player - initialize physics body
@@ -70,6 +71,8 @@ bool Player::Start() {
 
 	// Assign collider type
 	pbody->ctype = ColliderType::PLAYER;
+
+	spawnPosition = position;
 
 	// initialize audio effect
 	pickCoinFxId = Engine::GetInstance().audio->LoadFx("Assets/Audio/Fx/coin-collision-sound-342335.wav");
@@ -88,6 +91,27 @@ bool Player::Update(float dt)
 		ApplyPhysics();
 		Attack(dt);
 		Draw(dt);
+
+		// dt viene en ms -> pasamos a segundos
+		float dtSec = dt / 1000.0f;
+
+		if (invulnerable)
+		{
+			invulnTimer -= dtSec;
+			if (invulnTimer <= 0.0f)
+			{
+				invulnerable = false;
+				blinkVisible = true; // aseguramos que se vea al final
+			}
+
+			// parpadeo
+			blinkTimer -= dtSec;
+			if (blinkTimer <= 0.0f)
+			{
+				blinkTimer = blinkInterval;
+				blinkVisible = !blinkVisible;
+			}
+		}
 
 	// Muerte por caida (no afecta en GodMode)
 	if (!GodMode)
@@ -380,6 +404,15 @@ void Player::Attack(float dt) {
 	}
 }
 
+static const char* LifeFrameNameFromQuarters(int q) // q: 0..4
+{
+	if (q <= 0) return "life_0";
+	if (q == 1) return "life_1";
+	if (q == 2) return "life_2";
+	if (q == 3) return "life_3";
+	return "life_4";
+}
+
 // Draw the player
 void Player::Draw(float dt) {
 
@@ -394,23 +427,28 @@ void Player::Draw(float dt) {
 	Vector2D mapSize = Engine::GetInstance().map->GetMapSizeInPixels();
 	float limitLeft = Engine::GetInstance().render->camera.w /4;
 	float limitRight = mapSize.getX() - Engine::GetInstance().render->camera.w *3 /4;
+	
 	if (position.getX() - limitLeft >0 && position.getX() < limitRight) {
 		Engine::GetInstance().render->camera.x = -position.getX() + Engine::GetInstance().render->camera.w /4;
 	}
 
 	SDL_Rect frame = animFrame;
 
-	Engine::GetInstance().render->DrawTexture(
-		texture,
-		x - texW /2,
-		y - texH /2,
-		&animFrame,
-		1.0f,
-		0.0,
-		0,
-		0,
-		facingLeft
-	);
+	// Parpadeo durante invulnerabilidad: a veces no dibujamos el sprite
+	if (!(invulnerable && !blinkVisible))
+	{
+		Engine::GetInstance().render->DrawTexture(
+			texture,
+			x - texW / 2,
+			y - texH / 2,
+			&animFrame,
+			1.0f,
+			0.0,
+			0,
+			0,
+			facingLeft
+		);
+	}
 
 	// Draw attack triangle (white) if active
 	if (attackActive) {
@@ -446,25 +484,41 @@ void Player::Draw(float dt) {
 		Engine::GetInstance().render->DrawLine(bx_i, by_i, tipx, tipy,255,255,255,255, true);
 	}
 
-	if (lifeTexture) {
-		const int hudScreenX = 20;	
+	if (lifeTexture)
+	{
+		const int hudScreenX = 20;
 		const int hudScreenY = 20;
 
 		int scale = Engine::GetInstance().window->GetScale();
 		int camX = Engine::GetInstance().render->camera.x;
-		int cmaY = Engine::GetInstance().render->camera.y;
+		int camY = Engine::GetInstance().render->camera.y;
 
-		int worldX = (hudScreenX - camX) / scale;
-		int worldY = (hudScreenY - cmaY) / scale;
+		int baseX = (hudScreenX - camX) / scale;
+		int baseY = (hudScreenY - camY) / scale;
 
-		SDL_Rect lifeFrame = lifeAnims.GetCurrentFrame();
+		// Dibujamos hasta 3 corazones (12 cuartos)
+		const int heartsToDraw = 3;
+		const int spacing = 34; // pixels entre corazones (ajusta si quieres)
 
-		Engine::GetInstance().render->DrawTexture(
-			lifeTexture,
-			worldX,
-			worldY,
-			&lifeFrame
-		);
+		for (int i = 0; i < heartsToDraw; ++i)
+		{
+			int q = hp - i * 4;           // cuartos que le quedan a este corazón
+			if (q < 0) q = 0;
+			if (q > 4) q = 4;
+
+			const char* animName = LifeFrameNameFromQuarters(q);
+			if (lifeAnims.Has(animName))
+				lifeAnims.SetCurrent(animName);
+
+			SDL_Rect frame = lifeAnims.GetCurrentFrame();
+
+			Engine::GetInstance().render->DrawTexture(
+				lifeTexture,
+				baseX + i * spacing,
+				baseY,
+				&frame
+			);
+		}
 	}
 
 }
@@ -507,37 +561,41 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 	case ColliderType::LIFEUP:
 		LOG("Collision LIFEUP");
 		Engine::GetInstance().audio->PlayFx(pickliveFxId);
-		AddLife();
+		ApplyLifeUp(1);
 		if (physB->listener)
 			physB->listener->Destroy();
 		break;
 
 	case ColliderType::ENEMY:
-		LOG("Collision ENEMY - Respawning!");
+	{
+		// Si estamos en i-frames, no recibimos daño
+		if (invulnerable) break;
 
-		// Reset velocidad física
-		Engine::GetInstance().physics->SetLinearVelocity(pbody, {0.0f, 0.0f});
+		LOG("Collision ENEMY - Damage!");
 
-		// Teletransportar al spawn
-		pbody->SetPosition((int)spawnPosition.getX(), (int)spawnPosition.getY());
+		// Activar invulnerabilidad + parpadeo
+		invulnerable = true;
+		invulnTimer = invulnDuration;
+		blinkTimer = blinkInterval;
+		blinkVisible = true;
 
-		// Actualizar valores internos de posición
-		position = spawnPosition;
+		// Quitar 1/4 de corazón
+		hp -= 1;
+		if (hp < 0) hp = 0;
+		UpdateLifeAnimation();
 
-		// Reposicionar cámara para centrar al jugador tras el respawn
-		Engine::GetInstance().render->camera.x = -position.getX() + Engine::GetInstance().render->camera.w / 14;
-		Engine::GetInstance().render->camera.y = -position.getY() + Engine::GetInstance().render->camera.h * 9 / 10;
+		// Knockback opcional (para que se note el golpe)
+		float kx = facingLeft ? 2.5f : -2.5f;
+		Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, kx, -0.2f, true);
 
-		// Reset estado
-		anims.SetCurrent("idle");
-		isJumping = false;
-		isDashing = false;
-		canDash = true;
-		jumpCount = 0;
-
-		RemoveLife();
+		// Si te quedas sin vida -> GameOver (tu escena ya se encarga del checkpoint)
+		if (hp <= 0)
+		{
+			Engine::GetInstance().scene->TriggerGameOver();
+		}
 
 		break;
+	}
 
 	case ColliderType::UNKNOWN:
 		LOG("Collision UNKNOWN");
@@ -575,49 +633,54 @@ void Player::OnCollisionEnd(PhysBody* physA, PhysBody* physB)
 }
 
 // Life management
+
 void Player::UpdateLifeAnimation()
 {
-	if (lives < 0) lives = 0;
-	if (lives > maxLives) lives = maxLives;
+	// Clamp
+	if (maxHp < 4) maxHp = 4;
+	if (maxHp > MAX_HP) maxHp = MAX_HP;
 
-	std::string animName;
+	if (hp < 0) hp = 0;
+	if (hp > maxHp) hp = maxHp;
 
-	if (lives == 4) animName = "life_4";
-	else if (lives == 3) animName = "life_3";
-	else if (lives == 2) animName = "life_2";
-	else if (lives == 1) animName = "life_1";
-	else animName = "life_0"; // lives == 0
+	// No hacemos SetCurrent aquí porque ahora vamos a dibujar varios corazones
+	// El frame se seleccionará en Draw() corazón a corazón.
+}
 
-	if (lifeAnims.Has(animName)) {
-		lifeAnims.SetCurrent(animName);
+void Player::ApplyLifeUp(int amount)
+{
+	if (amount <= 0) return;
+
+	// Si no estás al máximo, cura
+	if (hp < maxHp)
+	{
+		hp += amount;
+		if (hp > maxHp) hp = maxHp;
+		UpdateLifeAnimation();
+		return;
+	}
+
+	// Si estás al máximo, aumenta el máximo (hasta 12) y cura ese extra
+	if (maxHp < MAX_HP)
+	{
+		maxHp += amount;
+		if (maxHp > MAX_HP) maxHp = MAX_HP;
+
+		hp += amount;
+		if (hp > maxHp) hp = maxHp;
+
+		UpdateLifeAnimation();
 	}
 }
-void Player::AddLife() { // called when the player picks a life item
 
-	if (lives >= maxLives)
-		return;
-	
-	lives++;
+void Player::ResetLivesAfterGameOver()
+{
+	// Si quieres mantener la capacidad extra (maxHp) tras morir:
+	if (maxHp < 4) maxHp = 4;
+
+	hp = 4;                 // respawn con 1 corazón lleno
+	if (hp > maxHp) hp = maxHp;
+
 	UpdateLifeAnimation();
 }
-
-void Player::RemoveLife() { // called when the player is hit
-	
-	if (lives <= 0)
-		return;
-
-	lives--;
-	UpdateLifeAnimation();
-
-	if (lives <= 0) {
-		Engine::GetInstance().scene->TriggerGameOver();
-	}
-}
-
-void Player::ResetLivesAfterGameOver() { // reset lives to initial value after game over
-
-	lives = 1;
-	UpdateLifeAnimation();
-}
-
 

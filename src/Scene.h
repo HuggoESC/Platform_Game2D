@@ -13,6 +13,14 @@ enum class SaveMode
 	LOAD_MENU
 };
 
+enum class GameState
+{
+	PLAYING,
+	GAMEOVER,
+	PAUSED,
+	TITLE
+};
+
 class Scene : public Module
 {
 public:
@@ -44,6 +52,9 @@ public:
 	bool SaveGame();
 	bool LoadGame();
 
+	// Pausar el juego
+	bool IsPaused() const { return gameState == GameState::PAUSED; }
+
 	// Save and Load from a specific slot
 	bool SaveGameToSlot(int slot);
 	bool LoadGameFromSlot(int slot);
@@ -54,12 +65,20 @@ public:
 	void TriggerGameOver();
 	void DrawGameOver();
 
+	void SetCheckpoint(const Vector2D& pos);
+	void RequestSave(int slot);
+	void RequestLoad(int slot);
+
 	SaveMode saveMode = SaveMode::NONE;
 
 private:
 
 	// Declare a Player attribute
 	std::shared_ptr<Player> player;
+
+	GameState gameState = GameState::PLAYING;
+	
+	SDL_Texture* pauseTexture = nullptr;
 
 	bool pendingSave = false;
 	bool pendingLoad = false;

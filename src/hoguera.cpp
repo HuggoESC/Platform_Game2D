@@ -4,6 +4,7 @@
 #include "Render.h"
 #include "Physics.h"
 #include "Log.h"
+#include "Scene.h"
 
 hoguera::hoguera(int x, int y)
     : Entity(EntityType::HOGUERA)
@@ -21,9 +22,12 @@ bool hoguera::Awake()
 bool hoguera::Start()
 {
     // Animación
-    std::unordered_map<int, std::string> aliases = { {0,"idle"} };
+    std::unordered_map<int, std::string> aliases = {
+     {0, "on"},   // fuego animado (tile id 0)
+     {5, "off"}   // apagada (tile id 5) <-- AJUSTA EL 5 si tu TSX usa otro id
+    };
     anims.LoadFromTSX("Assets/Textures/hoguera.tsx", aliases);
-    anims.SetCurrent("idle");
+    anims.SetCurrent("off");  // empieza apagada
 
     // Textura
     texture = Engine::GetInstance().textures->Load("Assets/Textures/hoguera.png");
@@ -40,7 +44,7 @@ bool hoguera::Start()
         STATIC
     );
 
-    pbody->ctype = ColliderType::ITEM; 
+    pbody->ctype = ColliderType::SENSOR; 
     pbody->listener = this;
 
     return true;
@@ -64,10 +68,18 @@ bool hoguera::Update(float dt)
 
 void hoguera::OnCollision(PhysBody* physA, PhysBody* physB)
 {
+    if (activated) return;
+
     if (physB->ctype == ColliderType::PLAYER)
     {
-        LOG("HOGUERA tocada por jugador");
-        // Guardado lo haremos después
+        activated = true;
+
+		anims.SetCurrent("on");
+
+        Engine::GetInstance().scene->SetCheckpoint(position);
+
+        // Si quieres un sonido al activar:
+        // Engine::GetInstance().audio->PlayFx(fxCheckpointId);
     }
 }
 

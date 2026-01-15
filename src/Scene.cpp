@@ -69,7 +69,10 @@ bool Scene::Start()
 {
 	Engine::GetInstance().audio->PlayMusic("Assets/Audio/Music/level-iv-339695.wav");
 	Engine::GetInstance().map->Load("Assets/Maps/", "Level01.tmx");
-	
+	pauseTexture = Engine::GetInstance().textures->Load("Assets/Pantallas/PAUSE.png");
+
+	gameState = GameState::PLAYING;
+
 	return true;
 }
 
@@ -84,6 +87,19 @@ bool Scene::Update(float dt)
 {
 	// Make the camera movement independent of framerate
 	float camSpeed = 1;
+
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_P) == KEY_DOWN)
+	{
+		if (gameState == GameState::PLAYING)
+			gameState = GameState::PAUSED;
+		else if (gameState == GameState::PAUSED)
+			gameState = GameState::PLAYING;
+
+		LOG("PAUSE TOGGLE -> %s", (gameState == GameState::PAUSED) ? "PAUSED" : "PLAYING");
+	}
+
+	if (gameState == GameState::PAUSED)
+		return true;
 
 	if(Engine::GetInstance().input->GetKey(SDL_SCANCODE_UP) == KEY_REPEAT)
 		Engine::GetInstance().render->camera.y -= (int)ceil(camSpeed * dt);
@@ -131,6 +147,12 @@ bool Scene::SaveGameToSlot(int slot)
 	p.append_attribute("x") = player->position.getX();
 	p.append_attribute("y") = player->position.getY();
 
+	p.append_attribute("hp") = player->hp;
+	p.append_attribute("maxHp") = player->maxHp;
+
+	p.append_attribute("spawn_x") = player->spawnPosition.getX();
+	p.append_attribute("spawn_y") = player->spawnPosition.getY();
+
 	// Guardar cámara
 	pugi::xml_node cam = root.append_child("camera");
 	cam.append_attribute("x") = Engine::GetInstance().render->camera.x;
@@ -143,6 +165,7 @@ bool Scene::SaveGameToSlot(int slot)
 	{
 		if (!e) continue;
 		if (e->type == EntityType::PLAYER) continue;
+		if (e->type == EntityType::HOGUERA) continue;
 
 		pugi::xml_node n = ents.append_child("entity");
 		n.append_attribute("type") = EntityTypeToString(e->type);
@@ -188,6 +211,37 @@ bool Scene::LoadGameFromSlot(int slot)
 	if (player->pbody)
 		player->pbody->SetPosition((int)px, (int)py);
 
+	if (p.attribute("hp"))
+		player->hp = p.attribute("hp").as_int(4);
+	else
+		player->hp = 4;
+
+	if (p.attribute("maxHp"))
+		player->maxHp = p.attribute("maxHp").as_int(4);
+	else
+		player->maxHp = 4;
+
+	// Clamp de seguridad
+	if (player->maxHp < 4) player->maxHp = 4;
+	if (player->maxHp > Player::MAX_HP) player->maxHp = Player::MAX_HP;
+
+	if (player->hp < 0) player->hp = 0;
+	if (player->hp > player->maxHp) player->hp = player->maxHp;
+
+	// Cargar checkpoint (si existe)
+	if (p.attribute("spawn_x") && p.attribute("spawn_y"))
+	{
+		player->spawnPosition = Vector2D(
+			p.attribute("spawn_x").as_float(),
+			p.attribute("spawn_y").as_float()
+		);
+	}
+	else
+	{
+		// compatibilidad: si no existía en saves antiguos
+		player->spawnPosition = player->position;
+	}
+
 	// Cargar cámara
 
 	auto cam = root.child("camera");
@@ -201,7 +255,9 @@ bool Scene::LoadGameFromSlot(int slot)
 	auto& list = Engine::GetInstance().entityManager->entities;
 	for (auto it = list.begin(); it != list.end(); )
 	{
-		if (*it && (*it)->type != EntityType::PLAYER)
+		if (*it &&
+			(*it)->type != EntityType::PLAYER &&
+			(*it)->type != EntityType::HOGUERA)   // <-- NO BORRAR HOGUERA
 		{
 			(*it)->CleanUp();
 			it = list.erase(it);
@@ -242,6 +298,27 @@ bool Scene::LoadGameFromSlot(int slot)
 	Engine::GetInstance().physics->isLoading = false;
 
 	return true;
+}
+
+void Scene::RequestSave(int slot)
+{
+	pendingSave = true;
+	pendingSlot = slot;
+}
+
+void Scene::RequestLoad(int slot)
+{
+	pendingLoad = true;
+	pendingSlot = slot;
+}
+
+void Scene::SetCheckpoint(const Vector2D& pos)
+{
+	player->spawnPosition = pos;
+	LOG("Checkpoint actualizado: %.1f %.1f", pos.getX(), pos.getY());
+
+	// Autosave al slot 1 (pero DIFERIDO, seguro con Box2D)
+	RequestSave(1);
 }
 
 void Scene::ShowLoadNotification(int slot)
@@ -290,10 +367,8 @@ void Scene::DrawGameOver()
 	{
 		gameOverActive = false;
 
-		if (player)
-		{
-			player->ResetLivesAfterGameOver();
-		}
+		// Cargar el último checkpoint guardado (slot 1)
+		RequestLoad(1);
 	}
 }
 
@@ -322,12 +397,47 @@ bool Scene::PostUpdate()
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_ESCAPE) == KEY_DOWN)
 		ret = false;
 
+	if (gameState == GameState::PAUSED)
+	{
+		// Guardar cámara actual
+		int oldCamX = Engine::GetInstance().render->camera.x;
+		int oldCamY = Engine::GetInstance().render->camera.y;
+
+		// Forzar cámara a 0 para dibujar UI
+		Engine::GetInstance().render->camera.x = 0;
+		Engine::GetInstance().render->camera.y = 0;
+
+		// Dibujar la textura a pantalla completa en (0,0)
+		Engine::GetInstance().render->DrawTexture(
+			pauseTexture,
+			0,
+			0,
+			nullptr,
+			1.0f,
+			0.0,
+			0,
+			0,
+			false
+		);
+
+		// Restaurar cámara
+		Engine::GetInstance().render->camera.x = oldCamX;
+		Engine::GetInstance().render->camera.y = oldCamY;
+	}
+
 	return ret;
 }
 
 // Called before quitting
 bool Scene::CleanUp()
 {
+
+	if (pauseTexture)
+	{
+		Engine::GetInstance().textures->UnLoad(pauseTexture);
+		pauseTexture = nullptr;
+	}
+
 	LOG("Freeing scene");
 
 	return true;
