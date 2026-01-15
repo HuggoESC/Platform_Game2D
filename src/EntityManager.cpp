@@ -83,6 +83,12 @@ std::shared_ptr<Entity> EntityManager::CreateEntity(EntityType type)
 	case EntityType::HOGUERA:
 		entity = std::make_shared<hoguera>(0, 0);
 		break;
+	case EntityType::LIFEUP: 
+	{
+		auto e = std::make_shared<LifeUP>(0, 0);
+		entities.push_back(e);
+		return e;
+	}
 	default:
 		break;
 	}

@@ -10,6 +10,8 @@
 #include <vector>
 #include <box2d/box2d.h>
 
+
+
 Physics::Physics() : Module()
 {
     world = b2_nullWorldId;
@@ -44,6 +46,13 @@ bool Physics::PreUpdate()
     // Get the dt from the engine
     float dt = Engine::GetInstance().GetDt() / 1000.0f;
     b2World_Step(world, dt, 4);
+
+    // Si estamos cargando o queremos ignorar contactos este frame, no procesamos eventos
+    if (isLoading || ignoreContactSteps > 0)
+    {
+        if (ignoreContactSteps > 0) ignoreContactSteps--;
+        return true;
+    }
 
     // Sensor overlaps 
     const b2SensorEvents sensorEvents = b2World_GetSensorEvents(world);
@@ -217,9 +226,17 @@ bool Physics::PostUpdate()
         }
     }
 
-    // Process bodies to delete after the world step
-    for (PhysBody* physBody : bodiesToDelete) {
-        b2DestroyBody(physBody->body);
+    for (PhysBody* physBody : bodiesToDelete)
+    {
+        if (!physBody) continue;
+
+        if (!B2_IS_NULL(physBody->body))
+        {
+            b2DestroyBody(physBody->body);
+            physBody->body = b2_nullBodyId;
+        }
+
+        delete physBody; // <- CLAVE: libera PhysBody
     }
     bodiesToDelete.clear();
 
@@ -242,6 +259,8 @@ bool Physics::CleanUp()
 
 void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
 {
+	if (isLoading) return;
+
     if (!b2Shape_IsValid(shapeA) || !b2Shape_IsValid(shapeB)) return;
 
     b2BodyId bodyA = b2Shape_GetBody(shapeA);
@@ -265,6 +284,8 @@ void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
 
 void Physics::EndContact(b2ShapeId shapeA, b2ShapeId shapeB)
 {
+	if (isLoading) return;
+
     if (!b2Shape_IsValid(shapeA) || !b2Shape_IsValid(shapeB)) return;
 
     b2BodyId bodyA = b2Shape_GetBody(shapeA);
@@ -284,11 +305,18 @@ void Physics::EndContact(b2ShapeId shapeA, b2ShapeId shapeB)
 
 void Physics::DeletePhysBody(PhysBody* physBody)
 {
-	if (B2_IS_NULL(world)) return; // world already destroyed
-    if (physBody && !B2_IS_NULL(physBody->body) && physBody->listener->active)
+    if (B2_IS_NULL(world)) return;
+    if (!physBody) return;
+
+    // Evitar callbacks a entidades ya destruidas
+    physBody->listener = nullptr;
+
+    // Quitar user data del body para que BodyToPhys devuelva null si se consulta
+    if (!B2_IS_NULL(physBody->body))
     {
         b2Body_SetUserData(physBody->body, nullptr);
     }
+
     bodiesToDelete.push_back(physBody);
 }
 

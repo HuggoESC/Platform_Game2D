@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="64" height="24" tilewidth="32" tileheight="32" infinite="0" nextlayerid="16" nextobjectid="10">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="64" height="24" tilewidth="32" tileheight="32" infinite="0" nextlayerid="16" nextobjectid="12">
  <tileset firstgid="1" name="Ground" tilewidth="32" tileheight="32" tilecount="165" columns="15">
   <image source="Tilesets/Ground.png" width="504" height="360"/>
  </tileset>
@@ -1563,6 +1563,8 @@
   <object id="8" name="Slime" type="Enemy" x="61.8867" y="138.135" width="32" height="32" rotation="1.93917"/>
   <object id="5" name="hoguera" type="hoguera" x="1583.67" y="400.667" width="32.6667" height="30.6667"/>
   <object id="9" name="LifeUP" type="LifeUP" x="705.333" y="480" width="33.3333" height="32"/>
+  <object id="10" name="LifeUP" type="LifeUP" x="1406.67" y="384" width="29.3333" height="33.3333"/>
+  <object id="11" name="LifeUP" type="LifeUP" x="961.333" y="64.6667" width="29.3333" height="33.3333"/>
  </objectgroup>
  <layer id="13" name="Fondo" width="64" height="24">
   <data>

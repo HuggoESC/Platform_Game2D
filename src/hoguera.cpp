@@ -70,3 +70,20 @@ void hoguera::OnCollision(PhysBody* physA, PhysBody* physB)
         // Guardado lo haremos después
     }
 }
+
+bool hoguera::CleanUp()
+{
+    if (texture)
+    {
+        Engine::GetInstance().textures->UnLoad(texture);
+        texture = nullptr;
+    }
+
+    if (pbody)
+    {
+        Engine::GetInstance().physics->DeletePhysBody(pbody);
+        pbody = nullptr;
+    }
+
+    return true;
+}

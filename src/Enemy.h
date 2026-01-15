@@ -13,6 +13,8 @@ public:
     Enemy(int x, int y);
     ~Enemy();
 
+	bool CleanUp() override;
+
 	bool Update(float dt) override; // dt en milisegundos
 	void OnCollision(PhysBody* physA, PhysBody* physB) override; // dt en milisegundos
 	bool Destroy() override;

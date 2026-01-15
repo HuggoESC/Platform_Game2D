@@ -309,3 +309,33 @@ bool Enemy::Destroy()
 	Engine::GetInstance().entityManager->DestroyEntity(shared_from_this());
 	return true;
 }
+
+bool Enemy::CleanUp()
+{
+    // Evita callbacks a memoria liberada
+    if (pbody)
+    {
+        Engine::GetInstance().physics->DeletePhysBody(pbody);
+        pbody = nullptr;
+    }
+
+    if (sensorFront)
+    {
+        Engine::GetInstance().physics->DeletePhysBody(sensorFront);
+        sensorFront = nullptr;
+    }
+
+    if (sensorBack)
+    {
+        Engine::GetInstance().physics->DeletePhysBody(sensorBack);
+        sensorBack = nullptr;
+    }
+
+    if (texture)
+    {
+        Engine::GetInstance().textures->UnLoad(texture);
+        texture = nullptr;
+    }
+
+    return true;
+}

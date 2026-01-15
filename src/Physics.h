@@ -82,6 +82,10 @@ public:
     void BeginContact(b2ShapeId shapeA, b2ShapeId shapeB);
     void EndContact(b2ShapeId shapeA, b2ShapeId shapeB);
 
+	int ignoreContactSteps = 0;
+
+	bool isLoading = false;
+
     void DeletePhysBody(PhysBody* physBody);
     bool IsPendingToDelete(PhysBody* physBody);
 

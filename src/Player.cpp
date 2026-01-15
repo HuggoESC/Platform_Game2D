@@ -46,16 +46,18 @@ bool Player::Start() {
 	lifeTexture = Engine::GetInstance().textures->Load("Assets/Textures/Vida.png");
 	Engine::GetInstance().textures->GetSize(lifeTexture, lifeTexW, lifeTexH);
 
-	std::unordered_map<int, std::string> lifeAliases = { 
-		{0,"life_1"},
-		{1,"life_2"},
-		{2,"life_3"},
-		{3,"life_4"} 
+	std::unordered_map<int, std::string> lifeAliases = {
+		{0,"life_4"}, // 4 vidas (full)
+		{1,"life_3"}, // 3 vidas
+		{2,"life_2"}, // 2 vidas
+		{3,"life_1"}, // 1 vida
+		{4,"life_0"}  // 0 vidas (dead)
 	};
 
 	lifeAnims.LoadFromTSX("Assets/Textures/Vida.tsx", lifeAliases);
 
-	lives = 1;
+	// Empieza con vida completa:
+	lives = maxLives;
 	UpdateLifeAnimation();
 
 	// Add physics to the player - initialize physics body
@@ -505,6 +507,9 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 	case ColliderType::LIFEUP:
 		LOG("Collision LIFEUP");
 		Engine::GetInstance().audio->PlayFx(pickliveFxId);
+		AddLife();
+		if (physB->listener)
+			physB->listener->Destroy();
 		break;
 
 	case ColliderType::ENEMY:
@@ -570,17 +575,18 @@ void Player::OnCollisionEnd(PhysBody* physA, PhysBody* physB)
 }
 
 // Life management
-void Player::UpdateLifeAnimation() { // update the life animation based on current lives
-
+void Player::UpdateLifeAnimation()
+{
 	if (lives < 0) lives = 0;
 	if (lives > maxLives) lives = maxLives;
 
 	std::string animName;
 
-	if (lives >= 4) animName = "life_4";
+	if (lives == 4) animName = "life_4";
 	else if (lives == 3) animName = "life_3";
 	else if (lives == 2) animName = "life_2";
-	else animName = "life_1"; 
+	else if (lives == 1) animName = "life_1";
+	else animName = "life_0"; // lives == 0
 
 	if (lifeAnims.Has(animName)) {
 		lifeAnims.SetCurrent(animName);

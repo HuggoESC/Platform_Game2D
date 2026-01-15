@@ -11,6 +11,8 @@ class hoguera : public Entity
 public:
     hoguera(int x, int y);
 
+	bool CleanUp() override;
+
     bool Awake() override;
     bool Start() override;
     bool Update(float dt) override;

@@ -2,6 +2,7 @@
 
 #include "Module.h"
 #include "Player.h"
+#include "LifeUP.h"
 
 struct SDL_Texture;
 
@@ -59,6 +60,10 @@ private:
 
 	// Declare a Player attribute
 	std::shared_ptr<Player> player;
+
+	bool pendingSave = false;
+	bool pendingLoad = false;
+	int pendingSlot = 1;
 
 	int loadNotificationSlot = 0;
 	float loadNotificationTimer = 0.0f;

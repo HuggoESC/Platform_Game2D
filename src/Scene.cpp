@@ -1,3 +1,4 @@
+#include <direct.h>
 #include "Engine.h"
 #include "Input.h"
 #include "Textures.h"
@@ -12,7 +13,33 @@
 #include "Map.h"
 #include "Item.h"
 #include "Enemy.h"
+#include "LifeUP.h"
 
+#include <cstring> // strcmp
+
+static const char* EntityTypeToString(EntityType t)
+{
+	switch (t)
+	{
+	case EntityType::PLAYER: return "PLAYER";
+	case EntityType::ITEM:   return "ITEM";
+	case EntityType::ENEMY:  return "ENEMY";
+	case EntityType::LIFEUP: return "LIFEUP";
+	default:                 return "UNKNOWN";
+	}
+}
+
+static EntityType StringToEntityType(const char* s)
+{
+	if (!s) return EntityType::UNKNOWN;
+
+	if (strcmp(s, "PLAYER") == 0) return EntityType::PLAYER;
+	if (strcmp(s, "ITEM") == 0)   return EntityType::ITEM;
+	if (strcmp(s, "ENEMY") == 0)  return EntityType::ENEMY;
+	if (strcmp(s, "LIFEUP") == 0) return EntityType::LIFEUP;
+
+	return EntityType::UNKNOWN;
+}
 
 Scene::Scene() : Module()
 {
@@ -30,11 +57,9 @@ bool Scene::Awake()
 	bool ret = true;
 
 	// Instantiate the player using the entity manager
-	player = std::dynamic_pointer_cast<Player>(Engine::GetInstance().entityManager->CreateEntity(EntityType::PLAYER));
-	
-	// Create a new item using the entity manager and set the position to (200, 672) to test
-	std::shared_ptr<Item> item = std::dynamic_pointer_cast<Item>(Engine::GetInstance().entityManager->CreateEntity(EntityType::ITEM));
-	item->position = Vector2D(640, 480);
+	player = std::dynamic_pointer_cast<Player>(
+		Engine::GetInstance().entityManager->CreateEntity(EntityType::PLAYER)
+	);
 
 	return ret;
 }
@@ -74,16 +99,16 @@ bool Scene::Update(float dt)
 
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_F5) == KEY_DOWN)
 	{
-		LOG("¿Qué slot quieres guardar? (1, 2 o 3)");
-		// De momento guardamos siempre slot 1
-		SaveGameToSlot(1);
+		LOG("Guardado solicitado (slot 1)");
+		pendingSave = true;
+		pendingSlot = 1;
 	}
 
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_F6) == KEY_DOWN)
 	{
-		LOG("¿Qué slot quieres cargar? (1, 2 o 3)");
-		// De momento cargamos siempre slot 1
-		LoadGameFromSlot(1);
+		LOG("Carga solicitada (slot 1)");
+		pendingLoad = true;
+		pendingSlot = 1;
 	}
 
 	return true;
@@ -92,6 +117,9 @@ bool Scene::Update(float dt)
 
 bool Scene::SaveGameToSlot(int slot)
 {
+	// Asegura que existe la carpeta Saves
+	_mkdir("saves");
+
 	std::string path = "Saves/slot" + std::to_string(slot) + ".xml";
 	LOG("Guardando slot %d...", slot);
 
@@ -103,23 +131,35 @@ bool Scene::SaveGameToSlot(int slot)
 	p.append_attribute("x") = player->position.getX();
 	p.append_attribute("y") = player->position.getY();
 
-	// Guardar entidades
+	// Guardar cámara
+	pugi::xml_node cam = root.append_child("camera");
+	cam.append_attribute("x") = Engine::GetInstance().render->camera.x;
+	cam.append_attribute("y") = Engine::GetInstance().render->camera.y;
+
+	// Guardar entidades (NO guardes al player aquí)
 	pugi::xml_node ents = root.append_child("entities");
 
 	for (auto& e : Engine::GetInstance().entityManager->entities)
 	{
+		if (!e) continue;
+		if (e->type == EntityType::PLAYER) continue;
+
 		pugi::xml_node n = ents.append_child("entity");
-		n.append_attribute("type") = (int)e->type;
+		n.append_attribute("type") = EntityTypeToString(e->type);
 		n.append_attribute("x") = e->position.getX();
 		n.append_attribute("y") = e->position.getY();
 	}
 
-	file.save_file(path.c_str());
-	LOG("Slot %d guardado correctamente.", slot);
+	bool ok = file.save_file(path.c_str());
+	if (!ok)
+	{
+		LOG("ERROR: No se pudo guardar el slot %d en %s", slot, path.c_str());
+		return false;
+	}
 
+	LOG("Slot %d guardado correctamente.", slot);
 	return true;
 }
-
 bool Scene::LoadGameFromSlot(int slot)
 {
 	std::string path = "Saves/slot" + std::to_string(slot) + ".xml";
@@ -134,31 +174,72 @@ bool Scene::LoadGameFromSlot(int slot)
 		return false;
 	}
 
+	Engine::GetInstance().physics->isLoading = true;
+	Engine::GetInstance().physics->ignoreContactSteps = 2;
+
 	pugi::xml_node root = file.child("save");
 
-	// Cargar jugador
+	// 1) Cargar jugador (posición + mover cuerpo físico)
 	auto p = root.child("player");
-	player->position = Vector2D(
-		p.attribute("x").as_float(),
-		p.attribute("y").as_float()
-	);
+	float px = p.attribute("x").as_float();
+	float py = p.attribute("y").as_float();
 
-	// Reset entidades
-	Engine::GetInstance().entityManager->entities.clear();
+	player->position = Vector2D(px, py);
+	if (player->pbody)
+		player->pbody->SetPosition((int)px, (int)py);
 
+	// Cargar cámara
+
+	auto cam = root.child("camera");
+	if (cam)
+	{
+		Engine::GetInstance().render->camera.x = cam.attribute("x").as_int();
+		Engine::GetInstance().render->camera.y = cam.attribute("y").as_int();
+	}
+
+	// 2) Borrar entidades actuales correctamente (evita colliders fantasma)
+	auto& list = Engine::GetInstance().entityManager->entities;
+	for (auto it = list.begin(); it != list.end(); )
+	{
+		if (*it && (*it)->type != EntityType::PLAYER)
+		{
+			(*it)->CleanUp();
+			it = list.erase(it);
+		}
+		else
+		{
+			++it;
+		}
+	}
+
+	// 3) Recrear entidades guardadas, y LLAMAR Start()
 	for (auto e : root.child("entities").children("entity"))
 	{
-		EntityType t = (EntityType)e.attribute("type").as_int();
+		EntityType t = StringToEntityType(e.attribute("type").as_string());
 		float x = e.attribute("x").as_float();
 		float y = e.attribute("y").as_float();
 
 		auto ent = Engine::GetInstance().entityManager->CreateEntity(t);
 		if (ent)
+		{
+			// Para la mayoría: position + Start
 			ent->position = Vector2D(x, y);
+			ent->Start();
+
+			// PERO Enemy necesita SetPosition porque su pbody se crea en el constructor
+			if (t == EntityType::ENEMY)
+			{
+				auto slime = std::dynamic_pointer_cast<Enemy>(ent);
+				if (slime)
+					slime->SetPosition((int)x, (int)y);
+			}
+		}
 	}
 
 	// Mostrar notificación en pantalla
 	ShowLoadNotification(slot);
+
+	Engine::GetInstance().physics->isLoading = false;
 
 	return true;
 }
@@ -220,6 +301,19 @@ void Scene::DrawGameOver()
 bool Scene::PostUpdate()
 {
 	bool ret = true;
+
+	// Ejecutar Save/Load de forma diferida (evita crasheos con Box2D)
+	if (pendingSave)
+	{
+		pendingSave = false;
+		SaveGameToSlot(pendingSlot);
+	}
+
+	if (pendingLoad)
+	{
+		pendingLoad = false;
+		LoadGameFromSlot(pendingSlot);
+	}
 
 	// Mostrar notificación de carga durante X segundos
 	DrawLoadNotification();
