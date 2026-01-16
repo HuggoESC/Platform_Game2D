@@ -148,6 +148,30 @@ bool Audio::CleanUp() {
     return true;
 }
 
+bool Audio::Update(float dt)
+{
+    if (!active) return true;
+
+    // Si no hay música cargada o no hay stream, no hacemos nada
+    if (!music_stream_ || !music_data_.buf || music_data_.len == 0)
+        return true;
+
+    // Cuando el dispositivo ha consumido todo lo que había encolado,
+    // volvemos a encolar el mismo buffer para hacer loop.
+    int available = SDL_GetAudioStreamAvailable(music_stream_);
+
+    if (available <= 0)
+    {
+        // Re-encolar el mismo audio (loop infinito)
+        if (!SDL_PutAudioStreamData(music_stream_, music_data_.buf, music_data_.len))
+        {
+            LOG("Audio: SDL_PutAudioStreamData(music loop) failed: %s", SDL_GetError());
+        }
+    }
+
+    return true;
+}
+
 bool Audio::PlayMusic(const char* path, float fadeTime) {
     if (!active) return false;
     if (!EnsureStreams()) return false;

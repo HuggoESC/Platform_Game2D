@@ -15,11 +15,16 @@ enum class SaveMode
 
 enum class GameState
 {
+	INTRO,
+	LEVELSELECTOR,
 	PLAYING,
 	GAMEOVER,
 	PAUSED,
 	TITLE
 };
+
+// --- GameOver menu ---
+enum class GameOverOption { RETRY, BACK_TO_TITLE };
 
 class Scene : public Module
 {
@@ -53,7 +58,7 @@ public:
 	bool LoadGame();
 
 	// Pausar el juego
-	bool IsPaused() const { return gameState == GameState::PAUSED; }
+	bool IsPaused() const { return gameState == GameState::PAUSED || gameState == GameState::TITLE; }
 
 	// Save and Load from a specific slot
 	bool SaveGameToSlot(int slot);
@@ -69,6 +74,8 @@ public:
 	void RequestSave(int slot);
 	void RequestLoad(int slot);
 
+	void RestartLevel();
+
 	SaveMode saveMode = SaveMode::NONE;
 
 private:
@@ -77,12 +84,32 @@ private:
 	std::shared_ptr<Player> player;
 
 	GameState gameState = GameState::PLAYING;
-	
+
+	// --- GameOver menu ---
+	GameOverOption gameOverOption = GameOverOption::RETRY;
+	SDL_Texture* gameOverTexture = nullptr;
+
 	SDL_Texture* pauseTexture = nullptr;
+
+	// --- Pause menu ---
+	enum class PauseOption { RESUME, SETTINGS, BACK_TO_TITLE, EXIT };
+	PauseOption pauseOption = PauseOption::RESUME;
+
+	// --- Intro menu ---
+	enum class IntroOption { START, EXIT };
+	IntroOption introOption = IntroOption::START;
+
+	SDL_Texture* introTexture = nullptr;
+	bool exitRequested = false;
+	bool showSettingsFromPause = false; // placeholder de momento
+
+	bool pauseMusicPlaying = false;	// para pausar/reanudar música al pausar
 
 	bool pendingSave = false;
 	bool pendingLoad = false;
 	int pendingSlot = 1;
+
+	GameState lastState = GameState::PLAYING;
 
 	int loadNotificationSlot = 0;
 	float loadNotificationTimer = 0.0f;

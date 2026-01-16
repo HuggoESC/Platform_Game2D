@@ -41,6 +41,12 @@ static EntityType StringToEntityType(const char* s)
 	return EntityType::UNKNOWN;
 }
 
+static const char* MUSIC_LEVEL1 = "Assets/Audio/Music/level-iv-339695.wav";
+static const char* MUSIC_PAUSE = "Assets/Audio/Music/PauseTheme.wav";
+static const char* MUSIC_GAMEOVER = "Assets/Audio/Music/GameOver.wav";
+static const char* MUSIC_INTRO = "Assets/Audio/Music/IntroTheme.wav";
+
+
 Scene::Scene() : Module()
 {
 	name = "scene";
@@ -67,11 +73,23 @@ bool Scene::Awake()
 // Called before the first frame
 bool Scene::Start()
 {
-	Engine::GetInstance().audio->PlayMusic("Assets/Audio/Music/level-iv-339695.wav");
 	Engine::GetInstance().map->Load("Assets/Maps/", "Level01.tmx");
-	pauseTexture = Engine::GetInstance().textures->Load("Assets/Pantallas/PAUSE.png");
+	pauseTexture = Engine::GetInstance().textures->Load("Assets/Pantallas/PAUSE.jpeg");
+	gameOverTexture = Engine::GetInstance().textures->Load("Assets/Pantallas/GAMEOVER.jpeg");
+	introTexture = Engine::GetInstance().textures->Load("Assets/Pantallas/INTRO.jpeg");
 
-	gameState = GameState::PLAYING;
+	if (gameOverTexture == nullptr)
+	{
+		LOG("ERROR: No se pudo cargar Assets/Pantallas/GAMEOVER.jpeg");
+	}
+
+	if (introTexture == nullptr)
+	{
+		LOG("ERROR: No se pudo cargar Assets/Pantallas/INTRO.jpeg");
+	}
+
+	gameState = GameState::INTRO;
+	lastState = (gameState == GameState::INTRO) ? GameState::PLAYING : GameState::INTRO;
 
 	return true;
 }
@@ -88,18 +106,254 @@ bool Scene::Update(float dt)
 	// Make the camera movement independent of framerate
 	float camSpeed = 1;
 
-	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_P) == KEY_DOWN)
+	// PAUSA con ESC (oficial)
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_ESCAPE) == KEY_DOWN)
 	{
 		if (gameState == GameState::PLAYING)
+		{
 			gameState = GameState::PAUSED;
+		}
 		else if (gameState == GameState::PAUSED)
+		{
 			gameState = GameState::PLAYING;
-
-		LOG("PAUSE TOGGLE -> %s", (gameState == GameState::PAUSED) ? "PAUSED" : "PLAYING");
+		}
+		else if (gameState == GameState::LEVELSELECTOR)
+		{
+			Engine::GetInstance().audio->PlayMusic(MUSIC_LEVEL1); // temporal hasta tener musica propia
+		}
 	}
 
-	if (gameState == GameState::PAUSED)
+	// P como toggle de pausa SOLO para debug (opcional)
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_P) == KEY_DOWN)
+	{
+		LOG("DEBUG: Toggle pause con P");
+		gameState = (gameState == GameState::PAUSED) ? GameState::PLAYING : GameState::PAUSED;
+	}
+
+	// --- AUDIO por cambio de estado (solo cuando cambia) ---
+	if (gameState != lastState)
+	{
+		if (gameState == GameState::INTRO)
+		{
+			Engine::GetInstance().audio->PlayMusic(MUSIC_INTRO);
+		}
+		else if (gameState == GameState::PAUSED)
+		{
+			Engine::GetInstance().audio->PlayMusic(MUSIC_PAUSE);
+		}
+		else if (gameState == GameState::GAMEOVER)
+		{
+			Engine::GetInstance().audio->PlayMusic(MUSIC_GAMEOVER);
+		}
+		else if (gameState == GameState::LEVELSELECTOR)
+		{
+			// De momento: usa música del nivel (o crea MUSIC_MENU si quieres)
+			Engine::GetInstance().audio->PlayMusic(MUSIC_LEVEL1);
+		}
+		else if (gameState == GameState::PLAYING)
+		{
+			Engine::GetInstance().audio->PlayMusic(MUSIC_LEVEL1);
+		}
+
+		lastState = gameState;
+	}
+
+	// --- Estado INTRO (con botones START/EXIT) ---
+	bool introWantsBlock = false;
+	if (gameState == GameState::INTRO)
+	{
+		int mx, my;
+		Engine::GetInstance().input->GetMousePosition(mx, my);
+
+		int winW = 0, winH = 0;
+		Engine::GetInstance().window->GetWindowSize(winW, winH);
+
+		// Botones centrados (ajústalo si quieres un pelín más arriba/abajo)
+		const int btnW = 360;
+		const int btnH = 75;
+		const int gap = 18;
+
+		int startX = (winW - btnW) / 2;
+		int startY_Start = (winH / 2) + 140; // START más arriba
+		int startY_Exit = (winH / 2) + 160 + btnH + gap;
+
+		SDL_Rect startRect = { startX, startY_Start, btnW, btnH };
+		SDL_Rect exitRect = { startX, startY_Exit,  btnW, btnH };
+
+		auto inside = [&](const SDL_Rect& r) {
+			return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
+			};
+
+		// Teclado: alterna entre START y EXIT
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_UP) == KEY_DOWN ||
+			Engine::GetInstance().input->GetKey(SDL_SCANCODE_DOWN) == KEY_DOWN)
+		{
+			introOption = (introOption == IntroOption::START) ? IntroOption::EXIT : IntroOption::START;
+		}
+
+		// Mouse hover
+		if (inside(startRect)) introOption = IntroOption::START;
+		if (inside(exitRect))  introOption = IntroOption::EXIT;
+
+		bool activate =
+			(Engine::GetInstance().input->GetKey(SDL_SCANCODE_RETURN) == KEY_DOWN) ||
+			(Engine::GetInstance().input->GetMouseButtonDown(1) == KEY_DOWN);
+
+		if (activate)
+		{
+			if (introOption == IntroOption::START)
+			{
+				// Lo mismo que "Enter": avanzar
+				gameState = GameState::LEVELSELECTOR;  // o PLAYING si aún no tienes selector
+			}
+			else // EXIT
+			{
+				exitRequested = true;
+			}
+		}
+
+		// Marcamos que debemos bloquear gameplay este frame
+		introWantsBlock = true;
+	}
+
+	// --- Estado GAMEOVER: menú con selectores ---
+	if (gameState == GameState::GAMEOVER)
+	{
+		// Navegación teclado
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_UP) == KEY_DOWN ||
+			Engine::GetInstance().input->GetKey(SDL_SCANCODE_DOWN) == KEY_DOWN)
+		{
+			gameOverOption = (gameOverOption == GameOverOption::RETRY)
+				? GameOverOption::BACK_TO_TITLE 
+				: GameOverOption::RETRY;
+		}
+
+		// Mouse hover/click
+		int mx, my;
+		Engine::GetInstance().input->GetMousePosition(mx, my);
+
+		int winW = 0, winH = 0;
+		Engine::GetInstance().window->GetWindowSize(winW, winH);
+
+		const int btnW = 340;
+		const int btnH = 60;
+		const int gap = 16;
+
+		int startX = (winW - btnW) / 2;
+		int startY = (winH / 2) + 120;
+
+		SDL_Rect retryRect = { startX, startY, btnW, btnH };
+		SDL_Rect introRect = { startX, startY + (btnH + gap), btnW, btnH };
+
+		auto inside = [&](const SDL_Rect& r) {
+			return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
+			};
+
+		if (inside(retryRect)) gameOverOption = GameOverOption::RETRY;
+		if (inside(introRect)) gameOverOption = GameOverOption::BACK_TO_TITLE;
+
+		bool activate =
+			(Engine::GetInstance().input->GetKey(SDL_SCANCODE_RETURN) == KEY_DOWN) ||
+			(Engine::GetInstance().input->GetMouseButtonDown(1) == KEY_DOWN);
+
+		if (activate)
+		{
+			if (gameOverOption == GameOverOption::RETRY)
+			{
+				gameOverActive = false;
+				RestartLevel();
+			}
+			else // BACK_TO_INTRO
+			{
+				gameOverActive = false;
+
+				// Dejamos el salto listo aunque INTRO aún no esté implementado
+				gameState = GameState::TITLE;
+
+				// Cuando implementemos Intro, aquí pondremos su música
+				// Engine::GetInstance().audio->PlayMusic(MUSIC_INTRO);
+			}
+		}
+
+		return true; // bloquear gameplay en GAMEOVER
+	}
+
+
+	if (gameState == GameState::PAUSED) {
+
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_UP) == KEY_DOWN)
+		{
+			int idx = (int)pauseOption;
+			idx = (idx - 1 + 4) % 4;
+			pauseOption = (PauseOption)idx;
+		}
+		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_DOWN) == KEY_DOWN)
+		{
+			int idx = (int)pauseOption;
+			idx = (idx + 1) % 4;
+			pauseOption = (PauseOption)idx;
+		}
+
+		// Mouse: hover/click en botones (rectángulos)
+		int mx, my;
+		Engine::GetInstance().input->GetMousePosition(mx, my);
+
+		int winW = 0, winH = 0;
+		Engine::GetInstance().window->GetWindowSize(winW, winH);
+
+		// Layout centrado
+		const int btnW = 320;
+		const int btnH = 55;
+		const int gap = 14;
+
+		int startX = (winW - btnW) / 2;
+		int startY = (winH / 2) - (btnH * 2) - (gap * 2);
+
+		SDL_Rect buttons[4];
+		for (int i = 0; i < 4; ++i)
+		{
+			buttons[i] = { startX, startY + i * (btnH + gap), btnW, btnH };
+
+			// Hover -> selecciona
+			if (mx >= buttons[i].x && mx <= buttons[i].x + buttons[i].w &&
+				my >= buttons[i].y && my <= buttons[i].y + buttons[i].h)
+			{
+				pauseOption = (PauseOption)i;
+			}
+		}
+
+		bool activate =
+			(Engine::GetInstance().input->GetKey(SDL_SCANCODE_RETURN) == KEY_DOWN) ||
+			(Engine::GetInstance().input->GetMouseButtonDown(1) == KEY_DOWN);
+
+		if (activate)
+		{
+			switch (pauseOption)
+			{
+			case PauseOption::RESUME:
+				gameState = GameState::PLAYING;
+				break;
+
+			case PauseOption::SETTINGS:
+				showSettingsFromPause = !showSettingsFromPause; // placeholder visual
+				LOG("SETTINGS (placeholder): aqui luego abriremos el menu real con sliders/checkbox.");
+				break;
+
+			case PauseOption::BACK_TO_TITLE:
+				gameState = GameState::TITLE;
+				showSettingsFromPause = false;
+				pauseOption = PauseOption::RESUME;
+				Engine::GetInstance().audio->PlayMusic(MUSIC_LEVEL1);
+				break;
+
+			case PauseOption::EXIT:
+				exitRequested = true;
+				break;
+			}
+		}
+
 		return true;
+	}
 
 	if(Engine::GetInstance().input->GetKey(SDL_SCANCODE_UP) == KEY_REPEAT)
 		Engine::GetInstance().render->camera.y -= (int)ceil(camSpeed * dt);
@@ -110,8 +364,8 @@ bool Scene::Update(float dt)
 	if(Engine::GetInstance().input->GetKey(SDL_SCANCODE_LEFT) == KEY_REPEAT)
 		Engine::GetInstance().render->camera.x -= (int)ceil(camSpeed * dt);
 	
-	if(Engine::GetInstance().input.get()->GetKey(SDL_SCANCODE_RIGHT) == KEY_REPEAT)
-		Engine::GetInstance().render.get()->camera.x += (int)ceil(camSpeed * dt);
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_RIGHT) == KEY_REPEAT)
+		Engine::GetInstance().render->camera.x += (int)ceil(camSpeed * dt);
 
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_F5) == KEY_DOWN)
 	{
@@ -300,6 +554,53 @@ bool Scene::LoadGameFromSlot(int slot)
 	return true;
 }
 
+void Scene::RestartLevel()
+{
+	LOG("RestartLevel(): reiniciando nivel sin usar saves...");
+
+	// 1) Borrar entidades excepto PLAYER (y hoguera si la quieres conservar como objeto del mapa)
+	auto& list = Engine::GetInstance().entityManager->entities;
+	for (auto it = list.begin(); it != list.end(); )
+	{
+		if (*it && (*it)->type != EntityType::PLAYER)
+		{
+			(*it)->CleanUp();
+			it = list.erase(it);
+		}
+		else
+		{
+			++it;
+		}
+	}
+
+	// 2) Recargar mapa (esto recreará colliders/objetos del mapa)
+	Engine::GetInstance().map->Load("Assets/Maps/", "Level01.tmx");
+
+	// 3) Reset del jugador a spawn inicial
+	//    Si tienes spawnPosition ya seteada al inicio del juego, úsala.
+	//    Si no, usa la posición actual como fallback.
+	Vector2D spawn = player->spawnPosition;
+	if (spawn.getX() == 0 && spawn.getY() == 0)
+		spawn = player->position;
+
+	player->position = spawn;
+	if (player->pbody)
+		player->pbody->SetPosition((int)spawn.getX(), (int)spawn.getY());
+
+	// Reset de HP (ajusta si quieres otra lógica)
+	player->hp = player->maxHp;
+
+	// 4) Reset cámara (opcional: centrado básico)
+	Engine::GetInstance().render->camera.x = 0;
+	Engine::GetInstance().render->camera.y = 0;
+
+	// 5) Volver a jugar
+	gameState = GameState::PLAYING;
+
+	// Música del nivel
+	Engine::GetInstance().audio->PlayMusic(MUSIC_LEVEL1);
+}
+
 void Scene::RequestSave(int slot)
 {
 	pendingSave = true;
@@ -342,34 +643,79 @@ void Scene::DrawLoadNotification()
 	}
 }
 
-void Scene::TriggerGameOver() 
+void Scene::TriggerGameOver()
 {
+	gameState = GameState::GAMEOVER;
 	gameOverActive = true;
-	gameOverTimer = 2.0f;
+	gameOverOption = GameOverOption::RETRY;
+
+	// Música de pausa o una específica de gameover (si tienes)
+	Engine::GetInstance().audio->PlayMusic(MUSIC_GAMEOVER);
 }
 
 void Scene::DrawGameOver()
 {
-	if (!gameOverActive)
+	if (!gameOverActive || gameOverTexture == nullptr)
 		return;
 
-	float dtSec = Engine::GetInstance().GetDt() / 1000.0f;
-	gameOverTimer -= dtSec;
+	// Guardar cámara
+	int oldCamX = Engine::GetInstance().render->camera.x;
+	int oldCamY = Engine::GetInstance().render->camera.y;
 
-	int w, h;
-	Engine::GetInstance().window->GetWindowSize(w, h);
+	Engine::GetInstance().render->camera.x = 0;
+	Engine::GetInstance().render->camera.y = 0;
 
-	SDL_Rect rec = { 0, 0, w, h };
+	int winW = 0, winH = 0;
+	Engine::GetInstance().window->GetWindowSize(winW, winH);
 
-	Engine::GetInstance().render->DrawRectangle(rec, 0, 0, 0, 255, true, false);
-
-	if (gameOverTimer <= 0.0f)
+	// Dibujar imagen GAMEOVER en modo "cover"
+	float texW = 0.0f, texH = 0.0f;
+	if (SDL_GetTextureSize(gameOverTexture, &texW, &texH))
 	{
-		gameOverActive = false;
+		float scaleX = (texW > 0.0f) ? ((float)winW / texW) : 1.0f;
+		float scaleY = (texH > 0.0f) ? ((float)winH / texH) : 1.0f;
+		float coverScale = (scaleX > scaleY) ? scaleX : scaleY;
 
-		// Cargar el último checkpoint guardado (slot 1)
-		RequestLoad(1);
+		float dstW = texW * coverScale;
+		float dstH = texH * coverScale;
+		float dstX = ((float)winW - dstW) * 0.5f;
+		float dstY = ((float)winH - dstH) * 0.5f;
+
+		SDL_FRect dstRect{ dstX, dstY, dstW, dstH };
+		SDL_RenderTexture(Engine::GetInstance().render->renderer, gameOverTexture, nullptr, &dstRect);
 	}
+
+	// Overlay oscuro
+	SDL_Rect full = { 0, 0, winW, winH };
+	Engine::GetInstance().render->DrawRectangle(full, 0, 0, 0, 120, true, false);
+
+	// Botones (sin texto aún)
+	const int btnW = 340;
+	const int btnH = 60;
+	const int gap = 16;
+
+	int startX = (winW - btnW) / 2;
+	int startY = (winH / 2) + 120;
+
+	SDL_Rect retryRect = { startX, startY, btnW, btnH };
+	SDL_Rect introRect = { startX, startY + (btnH + gap), btnW, btnH };
+
+	auto drawBtn = [&](const SDL_Rect& r, bool selected)
+		{
+			if (selected)
+				Engine::GetInstance().render->DrawRectangle(r, 255, 255, 255, 220, true, false);
+			else
+				Engine::GetInstance().render->DrawRectangle(r, 255, 255, 255, 140, true, false);
+
+			Engine::GetInstance().render->DrawRectangle(r, 0, 0, 0, 255, false, false);
+		};
+
+	drawBtn(retryRect, gameOverOption == GameOverOption::RETRY);
+	drawBtn(introRect, gameOverOption == GameOverOption::BACK_TO_TITLE);
+
+	// Restaurar cámara
+	Engine::GetInstance().render->camera.x = oldCamX;
+	Engine::GetInstance().render->camera.y = oldCamY;
 }
 
 // Called each loop iteration
@@ -394,36 +740,163 @@ bool Scene::PostUpdate()
 	DrawLoadNotification();
 	DrawGameOver();
 
-	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_ESCAPE) == KEY_DOWN)
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_F12) == KEY_DOWN)
 		ret = false;
 
 	if (gameState == GameState::PAUSED)
 	{
-		// Guardar cámara actual
+		if (pauseTexture != nullptr)
+		{
+			// Guardar cámara actual
+			int oldCamX = Engine::GetInstance().render->camera.x;
+			int oldCamY = Engine::GetInstance().render->camera.y;
+
+			// Forzar cámara a 0 para dibujar UI
+			Engine::GetInstance().render->camera.x = 0;
+			Engine::GetInstance().render->camera.y = 0;
+
+			// Tamaño de la ventana (en píxeles)
+			int winW = 0, winH = 0;
+			Engine::GetInstance().window->GetWindowSize(winW, winH);
+
+			// Tamaño real de la textura
+			float texW = 0.0f, texH = 0.0f;
+			if (!SDL_GetTextureSize(pauseTexture, &texW, &texH))
+			{
+				LOG("SDL_GetTextureSize failed for pauseTexture: %s", SDL_GetError());
+			}
+			else
+			{
+				// Escala uniforme para que "quepa" dentro de la ventana, manteniendo proporción
+				float scaleX = (texW > 0.0f) ? ((float)winW / texW) : 1.0f;
+				float scaleY = (texH > 0.0f) ? ((float)winH / texH) : 1.0f;
+				float fitScale = (scaleX > scaleY) ? scaleX : scaleY;
+				fitScale *= 1.0f; // dejar un margen del 20%
+
+				float dstW = texW * fitScale;
+				float dstH = texH * fitScale;
+
+				float dstX = ((float)winW - dstW) * 0.5f;
+				float dstY = ((float)winH - dstH) * 0.5f;
+
+				SDL_FRect dstRect{ dstX, dstY, dstW, dstH };
+
+				// Dibujar directamente con SDL para poder controlar destino (tamaño/posición)
+				SDL_RenderTexture(Engine::GetInstance().render->renderer, pauseTexture, nullptr, &dstRect);
+			}
+
+			// Restaurar cámara
+			Engine::GetInstance().render->camera.x = oldCamX;
+			Engine::GetInstance().render->camera.y = oldCamY;
+		}
+		else
+		{
+			LOG("pauseTexture is nullptr (no se puede dibujar la pausa).");
+		}
+		// Overlay oscuro para separar el fondo del UI
+		int w, h;
+		Engine::GetInstance().window->GetWindowSize(w, h);
+		SDL_Rect full = { 0, 0, w, h };
+		Engine::GetInstance().render->DrawRectangle(full, 0, 0, 0, 120, true, false);
+
+		// Botones
+		const int btnW = 320;
+		const int btnH = 55;
+		const int gap = 14;
+
+		int startX = (w - btnW) / 2;
+		int startY = (h / 2) - (btnH * 2) - (gap * 2);
+
+		for (int i = 0; i < 4; ++i)
+		{
+			SDL_Rect r = { startX, startY + i * (btnH + gap), btnW, btnH };
+
+			bool selected = ((int)pauseOption == i);
+
+			// fondo botón
+			if (selected)
+				Engine::GetInstance().render->DrawRectangle(r, 255, 255, 255, 220, true, false);
+			else
+				Engine::GetInstance().render->DrawRectangle(r, 255, 255, 255, 140, true, false);
+
+			// borde
+			Engine::GetInstance().render->DrawRectangle(r, 0, 0, 0, 255, false, false);
+		}
+
+		// Mini panel de "settings" placeholder
+		if (showSettingsFromPause)
+		{
+			SDL_Rect panel = { (w - 520) / 2, startY + 4 * (btnH + gap) + 10, 520, 120 };
+			Engine::GetInstance().render->DrawRectangle(panel, 0, 0, 0, 200, true, false);
+			Engine::GetInstance().render->DrawRectangle(panel, 255, 255, 255, 255, false, false);
+		}
+	}
+
+	if (gameState == GameState::INTRO && introTexture != nullptr)
+	{
 		int oldCamX = Engine::GetInstance().render->camera.x;
 		int oldCamY = Engine::GetInstance().render->camera.y;
-
-		// Forzar cámara a 0 para dibujar UI
 		Engine::GetInstance().render->camera.x = 0;
 		Engine::GetInstance().render->camera.y = 0;
 
-		// Dibujar la textura a pantalla completa en (0,0)
-		Engine::GetInstance().render->DrawTexture(
-			pauseTexture,
-			0,
-			0,
-			nullptr,
-			1.0f,
-			0.0,
-			0,
-			0,
-			false
-		);
+		int winW = 0, winH = 0;
+		Engine::GetInstance().window->GetWindowSize(winW, winH);
 
-		// Restaurar cámara
+		float texW = 0.0f, texH = 0.0f;
+		if (SDL_GetTextureSize(introTexture, &texW, &texH))
+		{
+			float scaleX = (texW > 0.0f) ? ((float)winW / texW) : 1.0f;
+			float scaleY = (texH > 0.0f) ? ((float)winH / texH) : 1.0f;
+			float coverScale = (scaleX > scaleY) ? scaleX : scaleY;
+
+			float dstW = texW * coverScale;
+			float dstH = texH * coverScale;
+			float dstX = ((float)winW - dstW) * 0.5f;
+			float dstY = ((float)winH - dstH) * 0.5f;
+
+			SDL_FRect dstRect{ dstX, dstY, dstW, dstH };
+			SDL_RenderTexture(Engine::GetInstance().render->renderer, introTexture, nullptr, &dstRect);
+		}
+
+		// Highlight botones START / EXIT
+			const int btnW = 360;
+		const int btnH = 75;
+		const int gap = 18;
+
+		int startX = (winW - btnW) / 2;
+		int startY_Start = (winH / 2) + 140; // START más arriba
+		int startY_Exit = (winH / 2) + 160 + btnH + gap;
+
+		SDL_Rect startRect = { startX, startY_Start, btnW, btnH };
+		SDL_Rect exitRect = { startX, startY_Exit,  btnW, btnH };
+
+		auto drawBtn = [&](const SDL_Rect& r, bool selected)
+			{
+				if (selected)
+				{
+					// Borde blanco brillante
+					Engine::GetInstance().render->DrawRectangle(r, 255, 255, 255, 255, false, false);
+
+					// Glow suave (opcional pero queda muy bien)
+					SDL_Rect glow = { r.x - 2, r.y - 2, r.w + 4, r.h + 4 };
+					Engine::GetInstance().render->DrawRectangle(glow, 255, 255, 255, 120, false, false);
+				}
+				else
+				{
+					// Borde muy sutil cuando no está seleccionado
+					Engine::GetInstance().render->DrawRectangle(r, 255, 255, 255, 80, false, false);
+				}
+			};
+
+		drawBtn(startRect, introOption == IntroOption::START);
+		drawBtn(exitRect, introOption == IntroOption::EXIT);
+
 		Engine::GetInstance().render->camera.x = oldCamX;
 		Engine::GetInstance().render->camera.y = oldCamY;
 	}
+
+	if (exitRequested)
+		ret = false;
 
 	return ret;
 }
@@ -436,6 +909,18 @@ bool Scene::CleanUp()
 	{
 		Engine::GetInstance().textures->UnLoad(pauseTexture);
 		pauseTexture = nullptr;
+	}
+
+	if (gameOverTexture)
+	{
+		Engine::GetInstance().textures->UnLoad(gameOverTexture);
+		gameOverTexture = nullptr;
+	}
+
+	if (introTexture)
+	{
+		Engine::GetInstance().textures->UnLoad(introTexture);
+		introTexture = nullptr;
 	}
 
 	LOG("Freeing scene");

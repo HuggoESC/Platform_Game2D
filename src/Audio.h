@@ -24,6 +24,9 @@ public:
 	// Called before quitting
 	bool CleanUp();
 
+    // Called each loop iteration
+    bool Update(float dt) override;
+
 	// Play a music file
 	bool PlayMusic(const char* path, float fadeTime = DEFAULT_MUSIC_FADE_TIME);
 
