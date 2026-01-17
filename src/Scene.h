@@ -91,6 +91,20 @@ private:
 
 	SDL_Texture* pauseTexture = nullptr;
 
+	// --- Level selector ---
+	enum class LevelSelOption { LEVEL1, LEVEL2, BACK };
+	LevelSelOption levelSelOption = LevelSelOption::LEVEL1;
+
+	SDL_Texture* levelSelectorTexture = nullptr;
+
+	bool levelSelectorInputLock = false;
+
+	// Nivel actual
+	int currentLevel = 1;
+
+	// Helpers
+	void LoadLevel(int level);
+
 	// --- Pause menu ---
 	enum class PauseOption { RESUME, SETTINGS, BACK_TO_TITLE, EXIT };
 	PauseOption pauseOption = PauseOption::RESUME;
