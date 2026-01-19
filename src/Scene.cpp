@@ -280,15 +280,13 @@ bool Scene::Update(float dt)
 		// Bloqueo de input al entrar (evita que el Enter de la intro active también el selector)
 		if (levelSelectorInputLock)
 		{
-			// Espera a que se suelte ENTER y el click
-			if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_RETURN) == KEY_UP &&
-				Engine::GetInstance().input->GetMouseButtonDown(1) == KEY_UP)
+			if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_RETURN) == KEY_IDLE)
 			{
 				levelSelectorInputLock = false;
 			}
 
 			levelWantsBlock = true;
-			return true; // bloquea gameplay y NO procesa selección todavía
+			return true;
 		}
 
 		bool activate =
@@ -682,6 +680,24 @@ void Scene::LoadLevel(int level)
 	const char* mapFile = (level == 2) ? MAP_LEVEL2 : MAP_LEVEL1;
 	Engine::GetInstance().map->Load("Assets/Maps/", mapFile);
 
+	// --- SPAWN DEBUG: enemigo volador fijo ---
+	auto e = Engine::GetInstance().entityManager->CreateEntity(EntityType::ENEMY);
+	auto en = std::dynamic_pointer_cast<Enemy>(e);
+
+	if (en)
+	{
+		// IMPORTANTE: ponlo cerca del origen/cámara para verlo seguro
+		int spawnX = 200;
+		int spawnY = 200;
+
+		en->SetPosition(spawnX, spawnY);
+
+		// Lo convertimos a volador (frame size de tu sprite)
+		en->MakeFlying(79, 69);
+
+		LOG("Spawned Flying Enemy at %d, %d", spawnX, spawnY);
+	}
+
 	// 3) Reset jugador a spawn
 	Vector2D spawn = player->spawnPosition;
 	if (spawn.getX() == 0 && spawn.getY() == 0)
@@ -875,12 +891,12 @@ bool Scene::PostUpdate()
 
 		// Misma geometría que en Update() (debe coincidir)
 		const int y = (winH / 2) - 35;
-		const int box = 96;
-		const int gap = 28;
-		const int backW = 190;
+		const int box = 95;
+		const int gap = 60;
+		const int backW = 140;
 
 		int totalW = box + gap + box + gap + backW;
-		int startX = (winW - totalW) / 2 + 260;
+		int startX = (winW - totalW) / 2 + 220;
 
 		SDL_Rect level1Rect = { startX, y, box, box };
 		SDL_Rect level2Rect = { startX + box + gap, y, box, box };

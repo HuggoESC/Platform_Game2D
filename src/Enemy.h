@@ -7,6 +7,12 @@
 #include "Physics.h" 
 #include <random>
 
+enum class EnemyKind
+{
+	GROUND,   // tu slime actual
+	FLYING    // el nuevo enemigo volador
+};
+
 class Enemy : public Entity
 {
 public:
@@ -19,14 +25,8 @@ public:
 	void OnCollision(PhysBody* physA, PhysBody* physB) override; // dt en milisegundos
 	bool Destroy() override;
 
-	void SetPosition(int x, int y)
-	{
-		position.setX(x);
-		position.setY(y);
-
-		if (pbody != nullptr)
-			pbody->SetPosition((float)x, (float)y);
-	}
+	void SetPosition(int x, int y);
+	void MakeFlying(int frameW = 79, int frameH = 69);
 
 	// Check if enemy is hit by attack at given position and range
 	bool IsHitByAttack(float attackX, float attackY, float attackRange) const
@@ -79,4 +79,56 @@ private:
 	// Prevent immediate double-flip when hitting wall
 	float patrolFlipCooldown =300.0f; // ms cooldown after a flip/collision
 	float patrolFlipTimer =0.0f;
+
+	EnemyKind kind = EnemyKind::GROUND;
+
+	// --- Flying ---
+	SDL_Texture* flyingIdleTex = nullptr;
+	SDL_Texture* flyingTex = nullptr;     // si quieres usar FLYING.png como anim principal
+	int flyFrameW = 79;
+	int flyFrameH = 69;
+
+	struct SimpleAnim
+	{
+		std::vector<SDL_Rect> frames;
+		float fps = 10.0f;
+		bool loop = true;
+		float acc = 0.0f;
+		int idx = 0;
+
+		void Reset() { acc = 0.0f; idx = 0; }
+		void Update(float dt)
+		{
+			if (frames.empty()) return;
+			acc += dt;
+			float step = 1.0f / fps;
+			while (acc >= step)
+			{
+				acc -= step;
+				idx++;
+				if (idx >= (int)frames.size())
+				{
+					idx = loop ? 0 : (int)frames.size() - 1;
+				}
+			}
+		}
+		SDL_Rect GetFrame() const
+		{
+			if (frames.empty()) return SDL_Rect{ 0,0,0,0 };
+			return frames[idx];
+		}
+	};
+
+	SimpleAnim flyIdleAnim;
+	SimpleAnim flyAnim;
+	SimpleAnim* currentFlyAnim = nullptr;
+
+	// movimiento volador
+	float flyBaseY = 0.0f;
+	float flyTime = 0.0f;
+	float flyBobAmp = 10.0f;    // cuanto sube y baja
+	float flyBobFreq = 3.0f;    // velocidad de bob
+	float flySpeed = 80.0f;     // velocidad horizontal/diagonal
+	float flyAggroRange = 260.0f;
+
 };
