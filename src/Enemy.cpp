@@ -156,103 +156,130 @@ bool Enemy::Update(float dt)
 {
 
     // ---------------- FLYING ENEMY UPDATE ----------------
+   // ---------------- FLYING ENEMY UPDATE ----------------
     if (kind == EnemyKind::FLYING)
     {
-        // anim
-        flyTime += dt;
+        // dt llega en MILISEGUNDOS en tu proyecto -> lo pasamos a segundos
+        const float dtSec = dt / 1000.0f;
+        static bool facingLeft = true;
 
-        // posición actual desde el body
+        // Tiempo para bob y animación (solo 1 vez por frame)
+        flyTime += dtSec;
+
+        // Posición del enemigo en PIXELES (para dibujar) y también en METROS (para Box2D)
         int px, py;
         pbody->GetPosition(px, py);
 
-        float x = (float)px;
-        float y = (float)py;
+        const b2Vec2 posM = b2Body_GetPosition(pbody->body);
+        float xM = posM.x;
+        float yM = posM.y;
 
-        // flotado
-        float bob = sinf(flyTime * flyBobFreq) * flyBobAmp;
-        float targetY = flyBaseY + bob;
+        // Si por lo que sea flyBaseY está a 0 (poco probable), lo inicializamos (EN METROS)
+        if (flyBaseY == 0.0f)
+            flyBaseY = yM;
 
-        // buscar jugador (ya lo haces en FindPlayerInRadius, pero aquí lo haremos simple en world)
-        float vx = 0.0f;
-        float vy = (targetY - y) * 4.0f;
+        // Bob en Y (flyBobAmp está en PIXELES -> lo convertimos a METROS)
+        const float bobM = PIXEL_TO_METERS(flyBobAmp) * sinf(flyTime * flyBobFreq);
+        const float targetYM = flyBaseY + bobM;
+
+        // --- Buscar player ---
+        bool hasPlayer = false;
+        float playerXM = xM;
+        float playerYM = yM;
 
         for (const auto& entPtr : Engine::GetInstance().entityManager->entities)
         {
             if (entPtr && entPtr->type == EntityType::PLAYER)
             {
-                float tx = entPtr->position.getX();
-                float ty = entPtr->position.getY();
-
-                float dx = tx - x;
-                float dy = ty - y;
-                float dist = sqrtf(dx * dx + dy * dy);
-
-                if (dist < flyAggroRange && dist > 1.0f)
-                {
-                    // persigue
-                    float nx = dx / dist;
-                    float ny = dy / dist;
-                    vx = nx * flySpeed;
-                    vy = ny * flySpeed;
-
-                    currentFlyAnim = &flyAnim;
-                }
-                else
-                {
-                    currentFlyAnim = &flyIdleAnim;
-                }
+                // entPtr->position está en PIXELES -> convertimos a METROS
+                playerXM = PIXEL_TO_METERS(entPtr->position.getX());
+                playerYM = PIXEL_TO_METERS(entPtr->position.getY());
+                hasPlayer = true;
                 break;
             }
         }
 
-        // --- DIBUJO: depende del tipo de enemigo ---
-        if (kind == EnemyKind::FLYING)
+        // Por defecto: hover (se mantiene cerca del targetYM)
+        float vx = 0.0f;
+        float vy = (targetYM - yM) * 3.0f;
+
+        // Si hay jugador, perseguir si está en rango
+        if (hasPlayer)
         {
-            // Si no hay textura aún, no podemos dibujar
-            if (flyingTex == nullptr || currentFlyAnim == nullptr)
+            // flyAggroRange está en PIXELES -> a METROS
+            const float aggroRangeM = PIXEL_TO_METERS(500.0f);
+
+            // Queremos apuntar un poco por encima del jugador para que no “choque raro”
+            const float aimOffsetY = PIXEL_TO_METERS(20.0f);
+
+            float dx = playerXM - xM;
+			flyFacingLeft = (dx < 0.0f);
+            float dy = (playerYM - aimOffsetY) - yM;
+            float dist = sqrtf(dx * dx + dy * dy);
+
+            if (dist < aggroRangeM && dist > 0.001f)
             {
-                // fallback: dibuja slime por si acaso (opcional)
-                SDL_Rect frame = animations.GetCurrentFrame();
-                Engine::GetInstance().render->DrawTexture(texture, px - 16, py - 16, &frame);
+                float nx = dx / dist;
+                float ny = dy / dist;
+
+                // OJO: velocidades de Box2D están en METROS/SEG.
+                // Tu flySpeed actual (80) era enorme si lo interpretamos como m/s.
+                // Vamos a usar una velocidad razonable (2.5 m/s ~ 125 px/s).
+                const float chaseSpeed = 3.5f;
+
+                vx = nx * chaseSpeed;
+
+                if (fabsf(vx) > 0.05f)
+                {
+                    facingLeft = (vx < 0.0f);
+				}
+
+                // Mezclamos persecución con el bob para que no “tiemble”
+                float chaseVy = ny * chaseSpeed;
+                float bobVy = (targetYM - yM) * 2.0f;
+                vy = chaseVy + bobVy;
+
+                currentFlyAnim = &flyAnim;       // si no tienes frames de flyAnim, puedes dejar idle
             }
             else
             {
-                // IMPORTANTE: si tu dt está en milisegundos, conviértelo a segundos para el anim
-                float dtSec = dt / 1000.0f;
-
-                // Actualizar animación
-                currentFlyAnim->Update(dtSec);
-
-                // Bob (sube y baja)
-                flyTime += dtSec;
-                float bob = sinf(flyTime * flyBobFreq) * flyBobAmp;
-
-                // Mantenerlo flotando (sin gravedad) y aplicar bob en Y
-                int fx, fy;
-                pbody->GetPosition(fx, fy);
-
-                // guardamos baseY si no está inicializada
-                if (flyBaseY == 0.0f) flyBaseY = (float)fy;
-
-                pbody->SetPosition(fx, (int)(flyBaseY + bob));
-
-                // Frame actual
-                SDL_Rect fr = currentFlyAnim->GetFrame();
-
-                // Dibujar centrado
-                Engine::GetInstance().render->DrawTexture(
-                    flyingTex,
-                    fx - (flyFrameW / 2),
-                    (int)(flyBaseY + bob) - (flyFrameH / 2),
-                    &fr
-                );
+                currentFlyAnim = &flyIdleAnim;
             }
+        }
+
+        // Aplicar velocidad REAL al body (en vez de SetPosition cada frame)
+        Engine::GetInstance().physics->SetLinearVelocity(pbody, vx, vy);
+
+        // Actualizar animación con dtSec
+        if (currentFlyAnim != nullptr)
+            currentFlyAnim->Update(dtSec);
+
+        // --- DIBUJO ---
+        if (flyingTex == nullptr || currentFlyAnim == nullptr)
+        {
+            // Fallback si algo falla
+            SDL_Rect frame = animations.GetCurrentFrame();
+            Engine::GetInstance().render->DrawTexture(texture, px - 16, py - 16, &frame);
         }
         else
         {
-            // Enemigo normal (slime)
-            SDL_Rect frame = animations.GetCurrentFrame();
-            Engine::GetInstance().render->DrawTexture(texture, px - 16, py - 16, &frame);
+            SDL_Texture* texToDraw = (currentFlyAnim == &flyAnim) ? flyingTex : flyingIdleTex;
+            SDL_Rect fr = currentFlyAnim->GetFrame();
+
+            // orientación según movimiento
+            bool flipX = !flyFacingLeft;
+
+            Engine::GetInstance().render->DrawTexture(
+                texToDraw,
+                px - (flyFrameW / 2),
+                py - (flyFrameH / 2),
+                &fr,
+                1.0f,      // speed
+                0.0,       // angle
+                INT_MAX,   // pivotX
+                INT_MAX,   // pivotY
+                flipX
+            );
         }
 
         return true;
@@ -433,25 +460,61 @@ void Enemy::MakeFlying(int frameW, int frameH)
     flyFrameW = frameW;
     flyFrameH = frameH;
 
+    if (sensorFront)
+    {
+        Engine::GetInstance().physics->DeletePhysBody(sensorFront);
+        sensorFront = nullptr;
+    }
+    if (sensorBack)
+    {
+        Engine::GetInstance().physics->DeletePhysBody(sensorBack);
+        sensorBack = nullptr;
+    }
+
+    // Rehacemos el body como sensor (así no choca con suelo/bloques)
+    int bx, by;
+    pbody->GetPosition(bx, by);
+
+    Engine::GetInstance().physics->DeletePhysBody(pbody);
+    pbody = nullptr;
+
+    // Un sensor rectangular suele ir mejor que un círculo para sprites
+    pbody = Engine::GetInstance().physics->CreateRectangleSensor(
+        bx, by,
+        (int)(flyFrameW * 0.45f),
+        (int)(flyFrameH * 0.45f),
+        DYNAMIC
+    );
+    pbody->listener = this;
+    pbody->ctype = ColliderType::ENEMY;
+
+    b2Body_SetFixedRotation(pbody->body, true);
+    b2Body_SetGravityScale(pbody->body, 0.0f);
+
     // Cargamos sprite del volador (usa el que quieras: IDLE.png o FLYING.png)
     // Te recomiendo empezar por IDLE.png
-    flyingTex = Engine::GetInstance().textures->Load("Assets/Textures/IDLEDEMON.png");
+    flyingIdleTex = Engine::GetInstance().textures->Load("Assets/Textures/IDLEDEMON.png");
+    flyingTex = Engine::GetInstance().textures->Load("Assets/Textures/FLYINGDEMON.png");
 
+    if (!flyingIdleTex)
+    {
+        LOG("ERROR: No se pudo cargar IDLEDEMON.png");
+        return;
+    }
     if (!flyingTex)
     {
-        LOG("ERROR: No se pudo cargar textura voladora IDLE.png");
+        LOG("ERROR: No se pudo cargar FLYINGDEMON.png");
         return;
     }
 
-    // Construir frames (fila única)
+    // -------------------- FRAMES IDLE --------------------
     flyIdleAnim.frames.clear();
 
-    float texW = 0.f, texH = 0.f;
-    SDL_GetTextureSize(flyingTex, &texW, &texH);
+    float idleW = 0.f, idleH = 0.f;
+    SDL_GetTextureSize(flyingIdleTex, &idleW, &idleH);
 
-    int cols = (int)(texW / flyFrameW);
-
-    for (int i = 0; i < cols; ++i)
+    int idleCols = (int)(idleW / flyFrameW);
+    for (int i = 0; i < idleCols; ++i)
     {
         SDL_Rect r;
         r.x = i * flyFrameW;
@@ -465,6 +528,27 @@ void Enemy::MakeFlying(int frameW, int frameH)
     flyIdleAnim.loop = true;
     flyIdleAnim.Reset();
 
+    // -------------------- FRAMES FLYING (MOVIMIENTO) --------------------
+    flyAnim.frames.clear();
+
+    float flyW = 0.f, flyH = 0.f;
+    SDL_GetTextureSize(flyingTex, &flyW, &flyH);
+
+    int flyCols = (int)(flyW / flyFrameW);
+    for (int i = 0; i < flyCols; ++i)
+    {
+        SDL_Rect r;
+        r.x = i * flyFrameW;
+        r.y = 0;
+        r.w = flyFrameW;
+        r.h = flyFrameH;
+        flyAnim.frames.push_back(r);
+    }
+
+    flyAnim.fps = 12.0f;   // un pelín más dinámica
+    flyAnim.loop = true;
+    flyAnim.Reset();
+
     currentFlyAnim = &flyIdleAnim;
 
     // Quitar gravedad para que no caiga
@@ -472,9 +556,8 @@ void Enemy::MakeFlying(int frameW, int frameH)
     Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
 
     // Base Y para el bob
-    int px, py;
-    pbody->GetPosition(px, py);
-    flyBaseY = (float)py;
+    b2Vec2 p = b2Body_GetPosition(pbody->body);
+    flyBaseY = p.y; // EN METROS
 
     LOG("Enemy convertido a FLYING con %d frames", (int)flyIdleAnim.frames.size());
 }

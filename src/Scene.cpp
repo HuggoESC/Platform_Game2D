@@ -688,7 +688,7 @@ void Scene::LoadLevel(int level)
 	{
 		// IMPORTANTE: ponlo cerca del origen/cámara para verlo seguro
 		int spawnX = 200;
-		int spawnY = 200;
+		int spawnY = 100;
 
 		en->SetPosition(spawnX, spawnY);
 

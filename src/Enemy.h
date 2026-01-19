@@ -21,6 +21,7 @@ public:
 
 	bool CleanUp() override;
 
+	bool flyFacingLeft = true;
 	bool Update(float dt) override; // dt en milisegundos
 	void OnCollision(PhysBody* physA, PhysBody* physB) override; // dt en milisegundos
 	bool Destroy() override;
