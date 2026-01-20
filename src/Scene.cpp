@@ -735,11 +735,21 @@ void Scene::RequestLoad(int slot)
 
 void Scene::SetCheckpoint(const Vector2D& pos)
 {
+	// Seguridad por si algo llama antes de tener player listo
+	if (!player) return;
+
 	player->spawnPosition = pos;
 	LOG("Checkpoint actualizado: %.1f %.1f", pos.getX(), pos.getY());
 
-	// Autosave al slot 1 (pero DIFERIDO, seguro con Box2D)
-	RequestSave(1);
+	// Evitar autosave en mitad de una carga
+	if (Engine::GetInstance().physics->isLoading) return;
+
+	// Evitar spam de guardados si el sensor dispara varias veces
+	// (por ejemplo, varias fixtures/contactos en el mismo frame)
+	if (!pendingSave)
+	{
+		RequestSave(1);
+	}
 }
 
 void Scene::ShowLoadNotification(int slot)

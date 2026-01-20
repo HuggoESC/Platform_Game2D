@@ -570,19 +570,15 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 
 	case ColliderType::LIFEUP:
 	{
-		LOG("Collision LIFEUP");
-		Engine::GetInstance().audio->PlayFx(pickliveFxId);
+		Entity* pickup = (physB) ? physB->listener : nullptr;
 
-		ApplyLifeUp();
-
-		// Capturamos el listener UNA SOLA VEZ y lo anulamos en el PhysBody
-		Entity* pickup = physB ? physB->listener : nullptr;
 		if (physB) physB->listener = nullptr;
 
-		if (pickup && pickup->active)
-		{
-			pickup->Destroy();
-		}
+		if (!pickup || !pickup->active) break;
+
+		Engine::GetInstance().audio->PlayFx(pickliveFxId);
+		ApplyLifeUp();
+		pickup->Destroy();
 
 		break;
 	}

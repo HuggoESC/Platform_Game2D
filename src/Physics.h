@@ -42,7 +42,7 @@ enum class ColliderType {
 class PhysBody
 {
 public:
-    PhysBody() : listener(NULL), body(b2_nullBodyId), ctype(ColliderType::UNKNOWN) {}
+    PhysBody() : listener(NULL), body(b2_nullBodyId), ctype(ColliderType::UNKNOWN), pendingDelete(false) {}
     ~PhysBody() {}
 
     void  GetPosition(int& x, int& y) const;
@@ -52,9 +52,10 @@ public:
     int   RayCast(int x1, int y1, int x2, int y2, float& normal_x, float& normal_y) const;
 
 public:
-    b2BodyId body;             
+    b2BodyId body;
     Entity* listener;
     ColliderType ctype;
+    bool pendingDelete = false;
 };
 
 // Module Physics

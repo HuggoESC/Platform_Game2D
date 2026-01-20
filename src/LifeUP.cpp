@@ -111,6 +111,7 @@ bool LifeUP::Destroy()
     // IMPORTANTÍSIMO: invalidar PhysBody YA para evitar callbacks a memoria liberada
     if (pbody)
     {
+		pbody->listener = nullptr;
         Engine::GetInstance().physics->DeletePhysBody(pbody);
         pbody = nullptr;
     }

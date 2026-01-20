@@ -274,18 +274,42 @@ void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
     PhysBody* physB = BodyToPhys(bodyB);
     if (!physA || !physB) return;
 
-    if (physA->listener &&
-        !IsPendingToDelete(physA) &&
-        physA->listener->active)
+    // --- physA ---
+    if (physA && !IsPendingToDelete(physA))
     {
-        physA->listener->OnCollision(physA, physB);
+        Entity* la = physA->listener;
+
+        // Defensa: si listener es claramente inválido, lo anulamos
+        // (0xFFFFFFFF... y otros patrones suelen ser basura en x64 debug)
+        uintptr_t ptr = (uintptr_t)la;
+        if (ptr < 0x10000 || ptr > 0x00007FFFFFFFFFFFULL)
+        {
+            physA->listener = nullptr;
+            la = nullptr;
+        }
+
+        if (la && la->active)
+        {
+            la->OnCollision(physA, physB);
+        }
     }
 
-    if (physB->listener &&
-        !IsPendingToDelete(physB) &&
-        physB->listener->active)
+    // --- physB ---
+    if (physB && !IsPendingToDelete(physB))
     {
-        physB->listener->OnCollision(physB, physA);
+        Entity* lb = physB->listener;
+
+        uintptr_t ptr = (uintptr_t)lb;
+        if (ptr < 0x10000 || ptr > 0x00007FFFFFFFFFFFULL)
+        {
+            physB->listener = nullptr;
+            lb = nullptr;
+        }
+
+        if (lb && lb->active)
+        {
+            lb->OnCollision(physB, physA);
+        }
     }
 
     if (b2Shape_IsSensor(shapeA) || b2Shape_IsSensor(shapeB))
@@ -324,30 +348,27 @@ void Physics::DeletePhysBody(PhysBody* physBody)
     if (B2_IS_NULL(world)) return;
     if (!physBody) return;
 
-    // Evitar callbacks a entidades ya destruidas
+    // ✅ SIEMPRE limpiar para evitar callbacks a memoria liberada
     physBody->listener = nullptr;
 
-    // Quitar user data del body para que BodyToPhys devuelva null si se consulta
     if (!B2_IS_NULL(physBody->body))
     {
         b2Body_SetUserData(physBody->body, nullptr);
     }
 
+    // ✅ Si ya estaba marcado, NO lo vuelvas a encolar (pero ya limpiamos arriba)
+    if (physBody->pendingDelete) return;
+
+    physBody->pendingDelete = true;
     bodiesToDelete.push_back(physBody);
 }
 
 
-
-bool Physics::IsPendingToDelete(PhysBody* physBody) {
-    bool pendingToDelete = false;
-    for (PhysBody* _physBody : bodiesToDelete) {
-        if (_physBody == physBody) {
-            pendingToDelete = true;
-            break;
-        }
-    }
-    return pendingToDelete;
+bool Physics::IsPendingToDelete(PhysBody* physBody)
+{
+    return physBody && physBody->pendingDelete;
 }
+
 
 // Velocity helpers
 b2Vec2 Physics::GetLinearVelocity(const PhysBody* p) const
