@@ -81,47 +81,53 @@ bool Physics::PreUpdate()
 
     // --- CONTACT EVENTS (solo para colisiones NO sensor, si tu Box2D los soporta) ---
 #ifdef B2_ENABLE_CONTACT_EVENTS  // si tu proyecto no tiene este define, puedes quitar este ifdef
-    const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
+    const b2SensorEvents sensorEvents = b2World_GetSensorEvents(world);
 
-    // begin
-    for (int i = 0; i < contactEvents.beginCount; ++i)
+    // BEGIN
+    for (int i = 0; i < sensorEvents.beginCount; ++i)
     {
-        const b2ContactBeginTouchEvent& e = contactEvents.beginEvents[i];
-        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+        const b2SensorBeginTouchEvent& e = sensorEvents.beginEvents[i];
+        if (!b2Shape_IsValid(e.sensorShapeId) || !b2Shape_IsValid(e.visitorShapeId)) continue;
 
-        // ✅ Evitar duplicar sensores (los sensores ya se manejan arriba)
-        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
-
-        BeginContact(e.shapeIdA, e.shapeIdB);
+        BeginContact(e.sensorShapeId, e.visitorShapeId);
     }
 
-    // end
-    for (int i = 0; i < contactEvents.endCount; ++i)
+    // END
+    for (int i = 0; i < sensorEvents.endCount; ++i)
     {
-        const b2ContactEndTouchEvent& e = contactEvents.endEvents[i];
-        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+        const b2SensorEndTouchEvent& e = sensorEvents.endEvents[i];
+        if (!b2Shape_IsValid(e.sensorShapeId) || !b2Shape_IsValid(e.visitorShapeId)) continue;
 
-        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
-
-        EndContact(e.shapeIdA, e.shapeIdB);
+        EndContact(e.sensorShapeId, e.visitorShapeId);
     }
 #endif
 
-    // Contacts
     const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
+
+    // BEGIN
     for (int i = 0; i < contactEvents.beginCount; ++i)
     {
         const b2ContactBeginTouchEvent& e = contactEvents.beginEvents[i];
         if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+
+        // 🚨 MUY IMPORTANTE: ignorar sensores aquí
+        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB))
+            continue;
+
         BeginContact(e.shapeIdA, e.shapeIdB);
     }
+
+    // END
     for (int i = 0; i < contactEvents.endCount; ++i)
     {
         const b2ContactEndTouchEvent& e = contactEvents.endEvents[i];
         if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+
+        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB))
+            continue;
+
         EndContact(e.shapeIdA, e.shapeIdB);
     }
-
 
     return ret;
 }
