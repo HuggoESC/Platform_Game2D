@@ -32,8 +32,11 @@ public:
 
 	void AddEntity(std::shared_ptr<Entity> entity);
 
-public:
-
 	std::list<std::shared_ptr<Entity>> entities;
+
+private:
+
+	std::list<std::shared_ptr<Entity>> entitiesToDestroy;
+	void FlushDestroyQueue();
 
 };

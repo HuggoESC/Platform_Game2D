@@ -149,7 +149,7 @@ PhysBody* Physics::CreateRectangleSensor(int x, int y, int width, int height, bo
     b2ShapeDef sdef = b2DefaultShapeDef();
     sdef.density = 1.0f;
     sdef.isSensor = true; 
-    sdef.enableContactEvents = true;
+    sdef.enableContactEvents = false;
     sdef.enableSensorEvents = true;
 
     b2CreatePolygonShape(b, &sdef, &box);
@@ -287,6 +287,12 @@ void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
     {
         physB->listener->OnCollision(physB, physA);
     }
+
+    if (b2Shape_IsSensor(shapeA) || b2Shape_IsSensor(shapeB))
+    {
+        // Sensors do not generate normal contacts
+        return;
+	}
 
     LOG("CONTACT --> A:%d  B:%d", (int)physA->ctype, (int)physB->ctype); //PRUEBA   
 }

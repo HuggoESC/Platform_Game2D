@@ -59,6 +59,7 @@ bool EntityManager::CleanUp()
 		ret = entity->CleanUp();
 	}
 
+	entitiesToDestroy.clear();
 	entities.clear();
 
 	return ret;
@@ -101,8 +102,29 @@ std::shared_ptr<Entity> EntityManager::CreateEntity(EntityType type)
 
 void EntityManager::DestroyEntity(std::shared_ptr<Entity> entity)
 {
-	entity->CleanUp();
-	entities.remove(entity);
+	if (!entity) return;
+
+	// Evitar duplicados
+	for (const auto& e : entitiesToDestroy)
+		if (e == entity) return;
+
+	// Marcar inactiva para que no se actualice más este frame
+	entity->active = false;
+
+	entitiesToDestroy.push_back(entity);
+}
+
+void EntityManager::FlushDestroyQueue()
+{
+	for (auto& e : entitiesToDestroy)
+	{
+		if (!e) continue;
+
+		// Limpieza final (aquí ya es seguro)
+		e->CleanUp();
+		entities.remove(e);
+	}
+	entitiesToDestroy.clear();
 }
 
 void EntityManager::AddEntity(std::shared_ptr<Entity> entity)
@@ -114,10 +136,15 @@ void EntityManager::AddEntity(std::shared_ptr<Entity> entity)
 bool EntityManager::Update(float dt)
 {
 	bool ret = true;
-	for(const auto entity : entities)
+
+	for (const auto& entity : entities)
 	{
-		if (entity->active == false) continue;
+		if (!entity || entity->active == false) continue;
 		ret = entity->Update(dt);
 	}
+
+	// Destruir fuera del bucle y fuera de callbacks de colisión
+	FlushDestroyQueue();
+
 	return ret;
 }
