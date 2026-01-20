@@ -57,19 +57,55 @@ bool Physics::PreUpdate()
     }
 
     // Sensor overlaps 
+  // --- SENSOR EVENTS (LifeUP, hoguera, etc.) ---
     const b2SensorEvents sensorEvents = b2World_GetSensorEvents(world);
+
+    // begin
     for (int i = 0; i < sensorEvents.beginCount; ++i)
     {
         const b2SensorBeginTouchEvent& e = sensorEvents.beginEvents[i];
         if (!b2Shape_IsValid(e.sensorShapeId) || !b2Shape_IsValid(e.visitorShapeId)) continue;
+
         BeginContact(e.sensorShapeId, e.visitorShapeId);
     }
+
+    // end
     for (int i = 0; i < sensorEvents.endCount; ++i)
     {
         const b2SensorEndTouchEvent& e = sensorEvents.endEvents[i];
         if (!b2Shape_IsValid(e.sensorShapeId) || !b2Shape_IsValid(e.visitorShapeId)) continue;
+
         EndContact(e.sensorShapeId, e.visitorShapeId);
     }
+
+
+    // --- CONTACT EVENTS (solo para colisiones NO sensor, si tu Box2D los soporta) ---
+#ifdef B2_ENABLE_CONTACT_EVENTS  // si tu proyecto no tiene este define, puedes quitar este ifdef
+    const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
+
+    // begin
+    for (int i = 0; i < contactEvents.beginCount; ++i)
+    {
+        const b2ContactBeginTouchEvent& e = contactEvents.beginEvents[i];
+        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+
+        // ✅ Evitar duplicar sensores (los sensores ya se manejan arriba)
+        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
+
+        BeginContact(e.shapeIdA, e.shapeIdB);
+    }
+
+    // end
+    for (int i = 0; i < contactEvents.endCount; ++i)
+    {
+        const b2ContactEndTouchEvent& e = contactEvents.endEvents[i];
+        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+
+        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
+
+        EndContact(e.shapeIdA, e.shapeIdB);
+    }
+#endif
 
     // Contacts
     const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
@@ -279,15 +315,6 @@ void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
     {
         Entity* la = physA->listener;
 
-        // Defensa: si listener es claramente inválido, lo anulamos
-        // (0xFFFFFFFF... y otros patrones suelen ser basura en x64 debug)
-        uintptr_t ptr = (uintptr_t)la;
-        if (ptr < 0x10000 || ptr > 0x00007FFFFFFFFFFFULL)
-        {
-            physA->listener = nullptr;
-            la = nullptr;
-        }
-
         if (la && la->active)
         {
             la->OnCollision(physA, physB);
@@ -298,13 +325,6 @@ void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
     if (physB && !IsPendingToDelete(physB))
     {
         Entity* lb = physB->listener;
-
-        uintptr_t ptr = (uintptr_t)lb;
-        if (ptr < 0x10000 || ptr > 0x00007FFFFFFFFFFFULL)
-        {
-            physB->listener = nullptr;
-            lb = nullptr;
-        }
 
         if (lb && lb->active)
         {
@@ -348,7 +368,7 @@ void Physics::DeletePhysBody(PhysBody* physBody)
     if (B2_IS_NULL(world)) return;
     if (!physBody) return;
 
-    // ✅ SIEMPRE limpiar para evitar callbacks a memoria liberada
+    // Siempre desarmar callbacks
     physBody->listener = nullptr;
 
     if (!B2_IS_NULL(physBody->body))
@@ -356,9 +376,10 @@ void Physics::DeletePhysBody(PhysBody* physBody)
         b2Body_SetUserData(physBody->body, nullptr);
     }
 
-    // ✅ Si ya estaba marcado, NO lo vuelvas a encolar (pero ya limpiamos arriba)
+    // ✅ Si ya está marcado, no lo encoles otra vez
     if (physBody->pendingDelete) return;
 
+    // ✅ CLAVE: marcar antes de encolar
     physBody->pendingDelete = true;
     bodiesToDelete.push_back(physBody);
 }

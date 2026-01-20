@@ -105,18 +105,25 @@ bool LifeUP::Destroy()
 {
     LOG("Destroying LifeUP");
 
-    // Desactivar primero
+    // Evitar dobles llamadas
+    if (!active) return true;
+
+    // Desactivar para que no se actualice ni se dibuje
     active = false;
 
-    // IMPORTANTÍSIMO: invalidar PhysBody YA para evitar callbacks a memoria liberada
+    // IMPORTANTÍSIMO:
+    // NO borramos aquí el PhysBody (porque luego CleanUp lo haría otra vez).
+    // Solo anulamos el listener para que no vuelva a disparar colisiones.
     if (pbody)
     {
-		pbody->listener = nullptr;
-        Engine::GetInstance().physics->DeletePhysBody(pbody);
-        pbody = nullptr;
+        pbody->listener = nullptr;
+
+        // Extra seguridad: vaciar userdata del body, así BodyToPhys no lo encontrará
+        if (!B2_IS_NULL(pbody->body))
+            b2Body_SetUserData(pbody->body, nullptr);
     }
 
-    // Ahora sí, eliminar entidad del manager
+    // Encolar destrucción de la entidad; el EntityManager llamará a CleanUp() fuera de callbacks
     Engine::GetInstance().entityManager->DestroyEntity(shared_from_this());
     return true;
 }

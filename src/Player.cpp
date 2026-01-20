@@ -567,18 +567,20 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		canAttack = true;
 		break;
 	}
-
 	case ColliderType::LIFEUP:
 	{
 		Entity* pickup = (physB) ? physB->listener : nullptr;
 
+		// Desarmar el PhysBody para que no vuelva a disparar este frame o siguientes
 		if (physB) physB->listener = nullptr;
 
+		// Si ya no hay entidad (o ya estaba destruida), no hacemos nada
 		if (!pickup || !pickup->active) break;
 
 		Engine::GetInstance().audio->PlayFx(pickliveFxId);
-		ApplyLifeUp();
-		pickup->Destroy();
+		ApplyLifeUp();          // suma 1/4 vida (tu lógica)
+
+		pickup->Destroy();      // ahora es seguro: solo desactiva y encola, no borra PhysBody aquí
 
 		break;
 	}
