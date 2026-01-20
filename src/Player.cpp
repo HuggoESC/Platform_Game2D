@@ -550,21 +550,42 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		break;
 
 	case ColliderType::ITEM:
+	{
 		LOG("Collision ITEM");
 		Engine::GetInstance().audio->PlayFx(pickCoinFxId);
-		if (physB->listener)
-			physB->listener->Destroy();
+
+		// Capturamos el listener UNA SOLA VEZ y lo anulamos en el PhysBody
+		Entity* pickup = physB ? physB->listener : nullptr;
+		if (physB) physB->listener = nullptr;
+
+		if (pickup && pickup->active)
+		{
+			pickup->Destroy();
+		}
+
 		// enable attack when picking the dagger
 		canAttack = true;
 		break;
+	}
 
 	case ColliderType::LIFEUP:
+	{
 		LOG("Collision LIFEUP");
 		Engine::GetInstance().audio->PlayFx(pickliveFxId);
-		ApplyLifeUp(1);
-		if (physB->listener)
-			physB->listener->Destroy();
+
+		ApplyLifeUp();
+
+		// Capturamos el listener UNA SOLA VEZ y lo anulamos en el PhysBody
+		Entity* pickup = physB ? physB->listener : nullptr;
+		if (physB) physB->listener = nullptr;
+
+		if (pickup && pickup->active)
+		{
+			pickup->Destroy();
+		}
+
 		break;
+	}
 
 	case ColliderType::ENEMY:
 	{

@@ -50,15 +50,27 @@ bool Item::Update(float dt)
 
 bool Item::CleanUp()
 {
-	Engine::GetInstance().textures->UnLoad(textureDaga);
-	Engine::GetInstance().physics->DeletePhysBody(pbody);
+	if (pbody)
+	{
+		Engine::GetInstance().physics->DeletePhysBody(pbody);
+		pbody = nullptr;
+	}
 	return true;
 }
 
 bool Item::Destroy()
 {
 	LOG("Destroying item");
+
 	active = false;
+
+	// IMPORTANTÍSIMO: borrar PhysBody en el momento de la destrucción
+	if (pbody)
+	{
+		Engine::GetInstance().physics->DeletePhysBody(pbody);
+		pbody = nullptr;
+	}
+
 	Engine::GetInstance().entityManager->DestroyEntity(shared_from_this());
 	return true;
 }

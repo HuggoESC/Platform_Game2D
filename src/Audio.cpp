@@ -145,6 +145,8 @@ bool Audio::CleanUp() {
 
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
     active = false;
+	current_music_path_.clear();
+
     return true;
 }
 
@@ -176,6 +178,12 @@ bool Audio::PlayMusic(const char* path, float fadeTime) {
     if (!active) return false;
     if (!EnsureStreams()) return false;
 
+    // Si ya está sonando esta misma música, NO reiniciar (mantiene posición)
+    if (path != nullptr && current_music_path_ == path)
+    {
+        return true;
+    }
+
     // Stop any existing music: clear stream + free buffer
     if (music_stream_) {
         SDL_ClearAudioStream(music_stream_);
@@ -201,6 +209,8 @@ bool Audio::PlayMusic(const char* path, float fadeTime) {
     }
 
     LOG("Audio: playing music %s", path);
+	current_music_path_ = path ? path : "";
+
     return true;
 }
 

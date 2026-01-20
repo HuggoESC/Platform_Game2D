@@ -35,10 +35,18 @@ bool hoguera::Start()
     texW = anims.GetCurrentFrame().w;
     texH = anims.GetCurrentFrame().h;
 
-    // Sensor para detectar al jugador
+   // Sensor para detectar al jugador
+  // En Tiled el objeto llega como esquina sup-izq, lo convertimos a centro
+    int cx = (int)position.getX() + texW / 2;
+    int cy = (int)position.getY() + texH / 2;
+
+    // Guardamos posición ya como centro para draw/checkpoint
+    position.setX((float)cx);
+    position.setY((float)cy);
+
     pbody = Engine::GetInstance().physics->CreateRectangleSensor(
-        (int)position.getX(),
-        (int)position.getY(),
+        cx,
+        cy,
         texW,
         texH,
         STATIC

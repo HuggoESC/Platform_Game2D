@@ -314,11 +314,19 @@ bool Map::Load(std::string path, std::string fileName)
                     {
                         auto h = std::make_shared<hoguera>((int)x, (int)y);
                         Engine::GetInstance().entityManager->AddEntity(h);
+
+                        // MUY IMPORTANTE: al crearse durante Map::Load(), hay que inicializarla manualmente
+                        h->Awake();
+                        h->Start();
                     }
-                    else if (name == "LifeUP") 
+                    else if (name == "LifeUP")
                     {
-						auto life = std::make_shared<LifeUP>((int)x, (int)y);
-						Engine::GetInstance().entityManager->AddEntity(life);
+                        auto life = std::make_shared<LifeUP>((int)x, (int)y);
+                        Engine::GetInstance().entityManager->AddEntity(life);
+
+                        // MUY IMPORTANTE: igual que arriba
+                        life->Awake();
+                        life->Start();
                     }
                 }
             }

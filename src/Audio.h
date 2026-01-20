@@ -55,6 +55,7 @@ private:
     // Loaded sounds
     SoundData music_data_{};
     std::vector<SoundData> sfx_; // 1-based indexing outwardly
+	std::string current_music_path_;
 
     // helpers
     bool LoadWavFile(const char* path, SoundData& out);

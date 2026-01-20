@@ -104,7 +104,18 @@ bool LifeUP::CleanUp()
 bool LifeUP::Destroy()
 {
     LOG("Destroying LifeUP");
+
+    // Desactivar primero
     active = false;
+
+    // IMPORTANTÍSIMO: invalidar PhysBody YA para evitar callbacks a memoria liberada
+    if (pbody)
+    {
+        Engine::GetInstance().physics->DeletePhysBody(pbody);
+        pbody = nullptr;
+    }
+
+    // Ahora sí, eliminar entidad del manager
     Engine::GetInstance().entityManager->DestroyEntity(shared_from_this());
     return true;
 }

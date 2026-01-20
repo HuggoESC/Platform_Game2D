@@ -46,8 +46,6 @@ bool Physics::PreUpdate()
     if (Engine::GetInstance().scene->IsPaused())
         return true;
 
-    // Step (update) the World
-    // Get the dt from the engine
     float dt = Engine::GetInstance().GetDt() / 1000.0f;
     b2World_Step(world, dt, 4);
 
@@ -264,6 +262,7 @@ bool Physics::CleanUp()
 void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
 {
 	if (isLoading) return;
+    if (ignoreContactSteps > 0) return;
 
     if (!b2Shape_IsValid(shapeA) || !b2Shape_IsValid(shapeB)) return;
 
@@ -273,15 +272,21 @@ void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
 
     PhysBody* physA = BodyToPhys(bodyA);
     PhysBody* physB = BodyToPhys(bodyB);
-    if (!physA || !physB) return;                  // user data cleared
+    if (!physA || !physB) return;
 
-    if (physA->listener && 
-        !IsPendingToDelete(physA) && 
-        physA->listener->active)  // ← Проверка, что listener активен
+    if (physA->listener &&
+        !IsPendingToDelete(physA) &&
+        physA->listener->active)
     {
         physA->listener->OnCollision(physA, physB);
     }
-    if (physB->listener && !IsPendingToDelete(physB)) physB->listener->OnCollision(physB, physA);
+
+    if (physB->listener &&
+        !IsPendingToDelete(physB) &&
+        physB->listener->active)
+    {
+        physB->listener->OnCollision(physB, physA);
+    }
 
     LOG("CONTACT --> A:%d  B:%d", (int)physA->ctype, (int)physB->ctype); //PRUEBA   
 }
@@ -289,6 +294,7 @@ void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
 void Physics::EndContact(b2ShapeId shapeA, b2ShapeId shapeB)
 {
 	if (isLoading) return;
+	if (ignoreContactSteps > 0) return;
 
     if (!b2Shape_IsValid(shapeA) || !b2Shape_IsValid(shapeB)) return;
 

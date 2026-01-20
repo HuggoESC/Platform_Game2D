@@ -161,7 +161,7 @@ bool Scene::Update(float dt)
 		else if (gameState == GameState::LEVELSELECTOR)
 		{
 			// De momento: usa música del nivel (o crea MUSIC_MENU si quieres)
-			Engine::GetInstance().audio->PlayMusic(MUSIC_LEVEL1);
+			Engine::GetInstance().audio->PlayMusic(MUSIC_INTRO);
 		}
 		else if (gameState == GameState::PLAYING)
 		{
@@ -365,11 +365,11 @@ bool Scene::Update(float dt)
 			{
 				gameOverActive = false;
 
-				// Dejamos el salto listo aunque INTRO aún no esté implementado
-				gameState = GameState::TITLE;
+				// Ir a la Intro real
+				gameState = GameState::INTRO;
 
-				// Cuando implementemos Intro, aquí pondremos su música
-				// Engine::GetInstance().audio->PlayMusic(MUSIC_INTRO);
+				// (Opcional pero recomendable) dejar el selector en START por defecto
+				introOption = IntroOption::START;
 			}
 		}
 
@@ -658,8 +658,10 @@ bool Scene::LoadGameFromSlot(int slot)
 void Scene::LoadLevel(int level)
 {
 	LOG("LoadLevel(%d)", level);
-
 	currentLevel = level;
+
+	Engine::GetInstance().physics->isLoading = true;
+	Engine::GetInstance().physics->ignoreContactSteps = 2; // 2 frames sin contactos
 
 	// 1) Limpiar entidades excepto PLAYER
 	auto& list = Engine::GetInstance().entityManager->entities;
@@ -715,6 +717,8 @@ void Scene::LoadLevel(int level)
 
 	// 5) Estado jugando
 	gameState = GameState::PLAYING;
+
+	Engine::GetInstance().physics->isLoading = false;
 }
 
 void Scene::RequestSave(int slot)
