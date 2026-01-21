@@ -554,8 +554,8 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		Engine::GetInstance().audio->PlayFx(pickCoinFxId);
 
 		// Capturamos el listener UNA SOLA VEZ y lo anulamos en el PhysBody
-		auto pickup = physB ? physB->listener.lock() : std::shared_ptr<Entity>{};
-		if (physB) physB->listener.reset();   // ✅ en vez de "= nullptr"
+		auto pickup = physB ? physB->listener.lock() : std::shared_ptr<Entity>();
+		if (physB) physB->listener.reset();
 
 		if (pickup && pickup->active)
 		{
@@ -569,8 +569,8 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 
 	case ColliderType::LIFEUP:
 	{
-		auto pickup = physB ? physB->listener.lock() : std::shared_ptr<Entity>{};
-		if (physB) physB->listener.reset();   // ✅ en vez de "= nullptr"
+		auto pickup = physB ? physB->listener.lock() : std::shared_ptr<Entity>();
+		if (physB) physB->listener.reset();
 
 		if (!pickup || !pickup->active) break;
 

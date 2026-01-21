@@ -19,6 +19,7 @@ public:
     Enemy(int x, int y);
     ~Enemy();
 
+	bool Start() override;
 	bool CleanUp() override;
 
 	bool flyFacingLeft = true;

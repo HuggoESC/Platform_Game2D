@@ -32,17 +32,14 @@ Enemy::Enemy(int x, int y)
 
  // cuerpo físico
  pbody = Engine::GetInstance().physics->CreateCircle(x, y,14, DYNAMIC);
- pbody->listener = shared_from_this();
  b2Body_SetFixedRotation(pbody->body, true);
  pbody->ctype = ColliderType::ENEMY;
 
  // sensores delantero y trasero
  sensorFront = Engine::GetInstance().physics->CreateRectangleSensor(x +20, y,6,6, STATIC);
- pbody->listener = shared_from_this();
  sensorFront->ctype = ColliderType::SENSOR;
 
  sensorBack = Engine::GetInstance().physics->CreateRectangleSensor(x -20, y,6,6, STATIC);
- pbody->listener = shared_from_this();
  sensorBack->ctype = ColliderType::SENSOR;
 
  // initialize patrol last position
@@ -57,6 +54,16 @@ Enemy::Enemy(int x, int y)
 
 Enemy::~Enemy()
 {
+}
+
+bool Enemy::Start()
+{
+    // IMPORTANTÍSIMO: aquí ya existe shared_ptr<Enemy>, así que shared_from_this() es seguro.
+    if (pbody)       pbody->listener = shared_from_this();
+    if (sensorFront) sensorFront->listener = shared_from_this();
+    if (sensorBack)  sensorBack->listener = shared_from_this();
+
+    return true;
 }
 
 static bool IsInside(int r, int c, int rows, int cols) {
@@ -441,6 +448,8 @@ bool Enemy::Destroy()
     return true;
 }
 
+
+
 void Enemy::SetPosition(int x, int y)
 {
     position.setX((float)x);
@@ -485,8 +494,9 @@ void Enemy::MakeFlying(int frameW, int frameH)
         (int)(flyFrameH * 0.45f),
         DYNAMIC
     );
-    pbody->listener = shared_from_this();
     pbody->ctype = ColliderType::ENEMY;
+
+	pbody->listener = shared_from_this();
 
     b2Body_SetFixedRotation(pbody->body, true);
     b2Body_SetGravityScale(pbody->body, 0.0f);
