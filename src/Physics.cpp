@@ -129,6 +129,8 @@ bool Physics::PreUpdate()
 
         EndContact(e.shapeIdA, e.shapeIdB);
     }
+#endif
+
 
     return ret;
 }

@@ -62,8 +62,8 @@ bool Player::Start() {
 	UpdateLifeAnimation();
 
 	// Add physics to the player - initialize physics body
-	texW =28;
-	texH =28;
+	texW =32;
+	texH =32;
 	pbody = Engine::GetInstance().physics->CreateCircle((int)position.getX(), (int)position.getY(), texW /2, bodyType::DYNAMIC);
 
 	// Assign player class (using "this") to the listener of the pbody. This makes the Physics module to call the OnCollision method
