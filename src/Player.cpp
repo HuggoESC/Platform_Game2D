@@ -123,6 +123,25 @@ bool Player::Update(float dt)
 		{
 				LOG("Player died. Respawning...");
 
+				// ✅ Quitar vida por caída
+				if (!invulnerable)
+				{
+					invulnerable = true;
+					invulnTimer = invulnDuration;
+					blinkTimer = blinkInterval;
+					blinkVisible = true;
+
+					hp -= 1;
+					if (hp < 0) hp = 0;
+					UpdateLifeAnimation();
+
+					if (hp <= 0)
+					{
+						Engine::GetInstance().scene->TriggerGameOver();
+						return true;
+					}
+				}
+
 				// Reset velocidad fisica
 				Engine::GetInstance().physics->SetLinearVelocity(pbody, {0.0f,0.0f });
 

@@ -56,8 +56,7 @@ bool Physics::PreUpdate()
         return true;
     }
 
-    // Sensor overlaps 
-  // --- SENSOR EVENTS (LifeUP, hoguera, etc.) ---
+    // --- SENSOR EVENTS (LifeUp, hoguera, etc.) ---
     const b2SensorEvents sensorEvents = b2World_GetSensorEvents(world);
 
     // begin
@@ -78,6 +77,31 @@ bool Physics::PreUpdate()
         EndContact(e.sensorShapeId, e.visitorShapeId);
     }
 
+    // --- CONTACT EVENTS (suelo, paredes, enemigo slime, etc.) ---
+    const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
+
+    // begin
+    for (int i = 0; i < contactEvents.beginCount; ++i)
+    {
+        const b2ContactBeginTouchEvent& e = contactEvents.beginEvents[i];
+        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+
+        // evita duplicar sensores (sensores ya están arriba)
+        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
+
+        BeginContact(e.shapeIdA, e.shapeIdB);
+    }
+
+    // end
+    for (int i = 0; i < contactEvents.endCount; ++i)
+    {
+        const b2ContactEndTouchEvent& e = contactEvents.endEvents[i];
+        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+
+        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
+
+        EndContact(e.shapeIdA, e.shapeIdB);
+    }
 
     // --- CONTACT EVENTS (solo para colisiones NO sensor, si tu Box2D los soporta) ---
 #ifdef B2_ENABLE_CONTACT_EVENTS  // si tu proyecto no tiene este define, puedes quitar este ifdef
@@ -186,10 +210,8 @@ PhysBody* Physics::CreateChain(int x, int y, int* points, int size, bodyType typ
     b2BodyDef def = b2DefaultBodyDef();
     def.type = ToB2Type(type);
     def.position = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
-
     b2BodyId b = b2CreateBody(world, &def);
 
-    // Build CCW loop from pixel points
     const int count = size / 2;
     std::vector<b2Vec2> verts(count);
     for (int i = 0; i < count; ++i)
@@ -201,9 +223,24 @@ PhysBody* Physics::CreateChain(int x, int y, int* points, int size, bodyType typ
     b2ChainDef cdef = b2DefaultChainDef();
     cdef.points = verts.data();
     cdef.count = count;
-    cdef.isLoop = true; // mirrors old CreateLoop
-    cdef.enableSensorEvents = true;
-    b2CreateChain(b, &cdef); // creates internal chain segment shapes
+    cdef.isLoop = true;
+
+    cdef.enableSensorEvents = false; 
+
+    b2CreateChain(b, &cdef);
+
+    const int shapeCount = b2Body_GetShapeCount(b);
+    if (shapeCount > 0)
+    {
+        std::vector<b2ShapeId> shapes(shapeCount);
+        b2Body_GetShapes(b, shapes.data(), shapeCount);
+
+        for (int i = 0; i < shapeCount; ++i)
+        {
+           
+            b2Shape_EnableContactEvents(shapes[i], true);
+        }
+    }
 
     PhysBody* pbody = new PhysBody();
     pbody->body = b;

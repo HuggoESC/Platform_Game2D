@@ -162,8 +162,15 @@ static bool FindPlayerInRadius(int startRow, int startCol, Map* map, int radius,
 bool Enemy::Update(float dt)
 {
 
-    // ---------------- FLYING ENEMY UPDATE ----------------
-   // ---------------- FLYING ENEMY UPDATE ----------------
+    static bool listenersSet = false;
+    if (!listenersSet)
+    {
+        if (pbody) pbody->listener = shared_from_this();
+        if (sensorFront) sensorFront->listener = shared_from_this();
+        if (sensorBack) sensorBack->listener = shared_from_this();
+        listenersSet = true;
+    }
+
     if (kind == EnemyKind::FLYING)
     {
         // dt llega en MILISEGUNDOS en tu proyecto -> lo pasamos a segundos
