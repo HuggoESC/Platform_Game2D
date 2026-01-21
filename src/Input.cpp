@@ -113,10 +113,16 @@ bool Input::PreUpdate()
 		case SDL_EVENT_MOUSE_MOTION:
 		{
 			int scale = Engine::GetInstance().window->GetScale();
-			mouseMotionX = (int) (event.motion.xrel / scale);
-			mouseMotionY = (int)(event.motion.yrel / scale);
-			mouseX = (int)(event.motion.x / scale);
-			mouseY = (int)(event.motion.y / scale);
+			float renderScale = Engine::GetInstance().window->GetRenderScale();
+
+			// Divide by both the window scale and the render scale
+			// When fullscreen is active, renderScale will be > 1.0
+			float totalScale = scale * renderScale;
+
+			mouseMotionX = (int)(event.motion.xrel / totalScale);
+			mouseMotionY = (int)(event.motion.yrel / totalScale);
+			mouseX = (int)(event.motion.x / totalScale);
+			mouseY = (int)(event.motion.y / totalScale);
 		}
 		break;
 		}

@@ -2,6 +2,7 @@
 #include "Window.h"
 #include "Render.h"
 #include "Log.h"
+#include "Input.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -81,6 +82,7 @@ bool Render::PreUpdate()
 
 bool Render::Update(float dt)
 {
+	HandleInput();
 	return true;
 }
 
@@ -112,6 +114,15 @@ void Render::SetViewPort(const SDL_Rect& rect)
 void Render::ResetViewPort()
 {
 	SDL_SetRenderViewport(renderer, &viewport);
+}
+
+void Render::HandleInput()
+{
+	// Toggle fullscreen with O key
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_O) == KEY_DOWN)
+	{
+		Engine::GetInstance().window->ToggleFullscreen();
+	}
 }
 
 // Blit to screen

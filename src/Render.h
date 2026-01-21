@@ -40,6 +40,9 @@ public:
 	// Set background color
 	void SetBackgroundColor(SDL_Color color);
 
+	// Handle input for fullscreen toggle
+	void HandleInput();
+
 public:
 
 	SDL_Renderer* renderer;
