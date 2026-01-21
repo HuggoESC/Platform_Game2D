@@ -57,7 +57,7 @@ bool Physics::PreUpdate()
     }
 
     // Sensor overlaps 
-  // --- SENSOR EVENTS (LifeUP, hoguera, etc.) ---
+    // --- SENSOR EVENTS (LifeUP, hoguera, etc.) ---
     const b2SensorEvents sensorEvents = b2World_GetSensorEvents(world);
 
     // begin
@@ -79,8 +79,7 @@ bool Physics::PreUpdate()
     }
 
 
-    // --- CONTACT EVENTS (solo para colisiones NO sensor, si tu Box2D los soporta) ---
-#ifdef B2_ENABLE_CONTACT_EVENTS  // si tu proyecto no tiene este define, puedes quitar este ifdef
+    // --- CONTACT EVENTS (colisiones normales - sin ifdef) ---
     const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
 
     // begin
@@ -105,8 +104,6 @@ bool Physics::PreUpdate()
 
         EndContact(e.shapeIdA, e.shapeIdB);
     }
-#endif
-
 
     return ret;
 }
