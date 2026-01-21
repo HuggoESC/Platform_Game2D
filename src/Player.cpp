@@ -67,8 +67,7 @@ bool Player::Start() {
 	pbody = Engine::GetInstance().physics->CreateCircle((int)position.getX(), (int)position.getY(), texW /2, bodyType::DYNAMIC);
 
 	// Assign player class (using "this") to the listener of the pbody. This makes the Physics module to call the OnCollision method
-	pbody->listener = this;
-
+	pbody->listener = shared_from_this();
 	// Assign collider type
 	pbody->ctype = ColliderType::PLAYER;
 
@@ -555,8 +554,8 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		Engine::GetInstance().audio->PlayFx(pickCoinFxId);
 
 		// Capturamos el listener UNA SOLA VEZ y lo anulamos en el PhysBody
-		Entity* pickup = physB ? physB->listener : nullptr;
-		if (physB) physB->listener = nullptr;
+		auto pickup = physB ? physB->listener.lock() : std::shared_ptr<Entity>{};
+		if (physB) physB->listener.reset();   // ✅ en vez de "= nullptr"
 
 		if (pickup && pickup->active)
 		{
@@ -567,20 +566,18 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		canAttack = true;
 		break;
 	}
+
 	case ColliderType::LIFEUP:
 	{
-		Entity* pickup = (physB) ? physB->listener : nullptr;
+		auto pickup = physB ? physB->listener.lock() : std::shared_ptr<Entity>{};
+		if (physB) physB->listener.reset();   // ✅ en vez de "= nullptr"
 
-		// Desarmar el PhysBody para que no vuelva a disparar este frame o siguientes
-		if (physB) physB->listener = nullptr;
-
-		// Si ya no hay entidad (o ya estaba destruida), no hacemos nada
 		if (!pickup || !pickup->active) break;
 
 		Engine::GetInstance().audio->PlayFx(pickliveFxId);
 		ApplyLifeUp();          // suma 1/4 vida (tu lógica)
 
-		pickup->Destroy();      // ahora es seguro: solo desactiva y encola, no borra PhysBody aquí
+		pickup->Destroy();      // ahora es seguro
 
 		break;
 	}

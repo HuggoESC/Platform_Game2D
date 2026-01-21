@@ -53,8 +53,7 @@ bool hoguera::Start()
     );
 
     pbody->ctype = ColliderType::SENSOR; 
-    pbody->listener = this;
-
+    pbody->listener = shared_from_this();
     return true;
 }
 

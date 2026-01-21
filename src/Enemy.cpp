@@ -32,17 +32,17 @@ Enemy::Enemy(int x, int y)
 
  // cuerpo físico
  pbody = Engine::GetInstance().physics->CreateCircle(x, y,14, DYNAMIC);
- pbody->listener = this;
+ pbody->listener = shared_from_this();
  b2Body_SetFixedRotation(pbody->body, true);
  pbody->ctype = ColliderType::ENEMY;
 
  // sensores delantero y trasero
  sensorFront = Engine::GetInstance().physics->CreateRectangleSensor(x +20, y,6,6, STATIC);
- sensorFront->listener = this;
+ pbody->listener = shared_from_this();
  sensorFront->ctype = ColliderType::SENSOR;
 
  sensorBack = Engine::GetInstance().physics->CreateRectangleSensor(x -20, y,6,6, STATIC);
- sensorBack->listener = this;
+ pbody->listener = shared_from_this();
  sensorBack->ctype = ColliderType::SENSOR;
 
  // initialize patrol last position
@@ -435,10 +435,10 @@ void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
 // Destroy enemy
 bool Enemy::Destroy()
 {
-	LOG("Destroying enemy");
-	active = false;
-	Engine::GetInstance().entityManager->DestroyEntity(shared_from_this());
-	return true;
+    LOG("Destroying enemy");
+    active = false;
+    Engine::GetInstance().entityManager->DestroyEntity(shared_from_this());
+    return true;
 }
 
 void Enemy::SetPosition(int x, int y)
@@ -485,7 +485,7 @@ void Enemy::MakeFlying(int frameW, int frameH)
         (int)(flyFrameH * 0.45f),
         DYNAMIC
     );
-    pbody->listener = this;
+    pbody->listener = shared_from_this();
     pbody->ctype = ColliderType::ENEMY;
 
     b2Body_SetFixedRotation(pbody->body, true);

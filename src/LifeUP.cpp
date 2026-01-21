@@ -40,7 +40,7 @@ bool LifeUP::Start()
     // Sensor rectangular (NO bloquea) y STATIC (no tiene por qué moverse)
     pbody = Engine::GetInstance().physics->CreateRectangleSensor(cx, cy, fw, fh, bodyType::STATIC);
 
-    pbody->listener = this;
+    pbody->listener = shared_from_this();
     pbody->ctype = ColliderType::LIFEUP;
 
     return true;
@@ -105,25 +105,17 @@ bool LifeUP::Destroy()
 {
     LOG("Destroying LifeUP");
 
-    // Evitar dobles llamadas
     if (!active) return true;
 
-    // Desactivar para que no se actualice ni se dibuje
     active = false;
 
-    // IMPORTANTÍSIMO:
-    // NO borramos aquí el PhysBody (porque luego CleanUp lo haría otra vez).
-    // Solo anulamos el listener para que no vuelva a disparar colisiones.
+    
     if (pbody)
     {
-        pbody->listener = nullptr;
-
-        // Extra seguridad: vaciar userdata del body, así BodyToPhys no lo encontrará
-        if (!B2_IS_NULL(pbody->body))
-            b2Body_SetUserData(pbody->body, nullptr);
+        pbody->listener.reset();
+        pbody->pendingDelete = true;
     }
 
-    // Encolar destrucción de la entidad; el EntityManager llamará a CleanUp() fuera de callbacks
     Engine::GetInstance().entityManager->DestroyEntity(shared_from_this());
     return true;
 }

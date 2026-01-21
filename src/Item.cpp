@@ -30,8 +30,7 @@ bool Item::Start() {
 
 	pbody->ctype = ColliderType::ITEM;
 
-	pbody->listener = this;   
-	return true;
+	pbody->listener = shared_from_this();	return true;
 }
 
 bool Item::Update(float dt)
@@ -64,13 +63,12 @@ bool Item::Destroy()
 
 	active = false;
 
-	// IMPORTANTÍSIMO: borrar PhysBody en el momento de la destrucción
 	if (pbody)
 	{
-		Engine::GetInstance().physics->DeletePhysBody(pbody);
-		pbody = nullptr;
+		pbody->listener.reset();
 	}
-
+	active = false;
 	Engine::GetInstance().entityManager->DestroyEntity(shared_from_this());
+
 	return true;
 }

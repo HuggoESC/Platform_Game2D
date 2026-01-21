@@ -4,6 +4,7 @@
 #include <list>
 #include <cmath>           
 #include <box2d/box2d.h>   
+#include <memory>
 
 #define GRAVITY_X 0.0f
 #define GRAVITY_Y -10.0f
@@ -42,8 +43,12 @@ enum class ColliderType {
 class PhysBody
 {
 public:
-    PhysBody() : listener(NULL), body(b2_nullBodyId), ctype(ColliderType::UNKNOWN), pendingDelete(false) {}
-    ~PhysBody() {}
+    PhysBody()
+        : body(b2_nullBodyId),
+        ctype(ColliderType::UNKNOWN),
+        pendingDelete(false)
+    {
+    }    ~PhysBody() {}
 
     void  GetPosition(int& x, int& y) const;
     void  SetPosition(int x, int y);
@@ -53,7 +58,7 @@ public:
 
 public:
     b2BodyId body;
-    Entity* listener;
+    std::weak_ptr<Entity> listener;
     ColliderType ctype;
     bool pendingDelete = false;
 };

@@ -107,21 +107,6 @@ bool Physics::PreUpdate()
     }
 #endif
 
-    // Contacts
-    const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
-    for (int i = 0; i < contactEvents.beginCount; ++i)
-    {
-        const b2ContactBeginTouchEvent& e = contactEvents.beginEvents[i];
-        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
-        BeginContact(e.shapeIdA, e.shapeIdB);
-    }
-    for (int i = 0; i < contactEvents.endCount; ++i)
-    {
-        const b2ContactEndTouchEvent& e = contactEvents.endEvents[i];
-        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
-        EndContact(e.shapeIdA, e.shapeIdB);
-    }
-
 
     return ret;
 }
@@ -297,6 +282,7 @@ bool Physics::CleanUp()
 
 void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
 {
+
 	if (isLoading) return;
     if (ignoreContactSteps > 0) return;
 
@@ -313,8 +299,7 @@ void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
     // --- physA ---
     if (physA && !IsPendingToDelete(physA))
     {
-        Entity* la = physA->listener;
-
+        auto la = physA->listener.lock();
         if (la && la->active)
         {
             la->OnCollision(physA, physB);
@@ -324,8 +309,7 @@ void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
     // --- physB ---
     if (physB && !IsPendingToDelete(physB))
     {
-        Entity* lb = physB->listener;
-
+        auto lb = physB->listener.lock();
         if (lb && lb->active)
         {
             lb->OnCollision(physB, physA);
@@ -357,8 +341,17 @@ void Physics::EndContact(b2ShapeId shapeA, b2ShapeId shapeB)
     if (!physA || !physB) return;
     if (IsPendingToDelete(physA) || IsPendingToDelete(physB)) return;
 
-    if (physA->listener && !IsPendingToDelete(physA)) physA->listener->OnCollisionEnd(physA, physB);
-    if (physB->listener && !IsPendingToDelete(physB)) physB->listener->OnCollisionEnd(physB, physA);
+    if (!IsPendingToDelete(physA))
+    {
+        auto la = physA->listener.lock();
+        if (la) la->OnCollisionEnd(physA, physB);
+    }
+
+    if (!IsPendingToDelete(physB))
+    {
+        auto lb = physB->listener.lock();
+        if (lb) lb->OnCollisionEnd(physB, physA);
+    }
 }
 
 
@@ -369,8 +362,7 @@ void Physics::DeletePhysBody(PhysBody* physBody)
     if (!physBody) return;
 
     // Siempre desarmar callbacks
-    physBody->listener = nullptr;
-
+    physBody->listener.reset();
     if (!B2_IS_NULL(physBody->body))
     {
         b2Body_SetUserData(physBody->body, nullptr);
