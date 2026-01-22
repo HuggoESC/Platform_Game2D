@@ -741,9 +741,28 @@ void Scene::LoadLevel(int level)
 
 	player->hp = player->maxHp;
 
-	// 4) Reset cámara
-	Engine::GetInstance().render->camera.x = 0;
-	Engine::GetInstance().render->camera.y = 0;
+	// 4) Colocar cámara para que el jugador sea visible
+	SDL_Rect& cam = Engine::GetInstance().render->camera;
+
+	Vector2D mapPx = Engine::GetInstance().map->GetMapSizeInPixels();
+
+	int targetCamX = (int)(-player->position.getX() + cam.w / 2);
+	int targetCamY = (int)(-player->position.getY() + cam.h / 2);
+
+	// Clamp para que no se salga del mapa
+	int minCamX = (int)(-(mapPx.getX() - cam.w));
+	int minCamY = (int)(-(mapPx.getY() - cam.h));
+
+	if (minCamX > 0) minCamX = 0;
+	if (minCamY > 0) minCamY = 0;
+
+	if (targetCamX > 0) targetCamX = 0;
+	if (targetCamY > 0) targetCamY = 0;
+	if (targetCamX < minCamX) targetCamX = minCamX;
+	if (targetCamY < minCamY) targetCamY = minCamY;
+
+	cam.x = targetCamX;
+	cam.y = targetCamY;
 
 	// 5) Estado jugando
 	gameState = GameState::PLAYING;

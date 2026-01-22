@@ -4,6 +4,8 @@
 #include <list>
 #include <vector>
 
+class PhysBody;
+
 struct Properties
 {
     struct Property
@@ -133,6 +135,8 @@ public:
 private:
 
     void UnloadMapData();
+
+    std::vector<PhysBody*> mapColliders;
 
     bool mapLoaded;
     MapData mapData;

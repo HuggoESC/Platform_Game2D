@@ -117,7 +117,14 @@ TileSet* Map::GetTilesetFromTileId(int gid) const
 
 void Map::UnloadMapData()
 {
-    // IMPORTANTE: solo limpia datos del mapa (capas/tilesets). No toca el helpTexture.
+
+    // 0) Borrar colliders del mapa anterior
+    for (PhysBody* b : mapColliders)
+    {
+        if (b)
+            Engine::GetInstance().physics->DeletePhysBody(b);
+    }
+    mapColliders.clear();
 
     // 1) Tilesets + texturas
     for (TileSet* ts : mapData.tilesets)
@@ -329,6 +336,7 @@ bool Map::Load(std::string path, std::string fileName)
                             pos.getY() + mapData.tileHeight / 2,
                             mapData.tileWidth, mapData.tileHeight,
                             STATIC);
+						mapColliders.push_back(c);
 
                         // Averiguamos de qué tileset viene este gid
                         TileSet* ts = GetTilesetFromTileId(gid);
