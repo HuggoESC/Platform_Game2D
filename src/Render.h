@@ -10,27 +10,21 @@ public:
 
 	Render();
 
-	// Destructor
 	virtual ~Render();
 
-	// Called before render is available
 	bool Awake();
 
-	// Called before the first frame
 	bool Start();
 
-	// Called each loop iteration
 	bool PreUpdate();
 	bool Update(float dt);
 	bool PostUpdate();
 
-	// Called before quitting
 	bool CleanUp();
 
 	void SetViewPort(const SDL_Rect& rect);
 	void ResetViewPort();
 
-	// Drawing
 	bool DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* section = nullptr, float speed = 1.0f, double angle = 0, int pivotX = INT_MAX, int pivotY = INT_MAX) const;
 	bool DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* section,float speed, double angle, int pivotX, int pivotY, bool flipX) const;
 	bool DrawTextureScaled(SDL_Texture* texture, int x, int y, const SDL_Rect* section, float scale);
@@ -40,10 +34,8 @@ public:
 	bool DrawText(const char* text, int x, int y, SDL_Color color = { 255,255,255,255 }, bool useCamera = false) const;
 	bool DrawTextureScaled(SDL_Texture* texture, int x, int y, const SDL_Rect* section, float scaleFactor, bool useCamera = true) const;
 
-	// Set background color
 	void SetBackgroundColor(SDL_Color color);
 
-	// Handle input for fullscreen toggle
 	void HandleInput();
 
 	SDL_Renderer* renderer;
