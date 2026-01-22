@@ -14,17 +14,14 @@ EntityManager::EntityManager() : Module()
 	name = "entitymanager";
 }
 
-// Destructor
 EntityManager::~EntityManager()
 {}
 
-// Called before render is available
 bool EntityManager::Awake()
 {
 	LOG("Loading Entity Manager");
 	bool ret = true;
 
-	// Iterates over the entities and calls the Awake
 	for(const auto entity : entities)
 	{
 		if (entity->active == false) continue;
@@ -39,7 +36,6 @@ bool EntityManager::Start() {
 
 	bool ret = true; 
 
-	// Iterates over the entities and calls Start
 	for(const auto entity : entities)
 	{
 		if (entity->active == false) continue;
@@ -49,7 +45,6 @@ bool EntityManager::Start() {
 	return ret;
 }
 
-// Called before quitting
 bool EntityManager::CleanUp()
 {
 	bool ret = true;
@@ -70,7 +65,6 @@ std::shared_ptr<Entity> EntityManager::CreateEntity(EntityType type)
 {
 	std::shared_ptr<Entity> entity = nullptr;
 
-	// Instantiate entity according to the type and add the new entity to the list of Entities
 	switch (type)
 	{
 	case EntityType::PLAYER:
@@ -108,11 +102,9 @@ void EntityManager::DestroyEntity(std::shared_ptr<Entity> entity)
 {
 	if (!entity) return;
 
-	// Evitar duplicados
 	for (const auto& e : entitiesToDestroy)
 		if (e == entity) return;
 
-	// Marcar inactiva para que no se actualice más este frame
 	entity->active = false;
 
 	entitiesToDestroy.push_back(entity);
@@ -124,7 +116,6 @@ void EntityManager::FlushDestroyQueue()
 	{
 		if (!e) continue;
 
-		// Limpieza final (aquí ya es seguro)
 		e->CleanUp();
 		entities.remove(e);
 	}
@@ -147,7 +138,6 @@ bool EntityManager::Update(float dt)
 		ret = entity->Update(dt);
 	}
 
-	// Destruir fuera del bucle y fuera de callbacks de colisión
 	FlushDestroyQueue();
 
 	return ret;

@@ -81,8 +81,6 @@ public:
 	EntityType type;
 	bool active = true;
 
-	// Possible properties, it depends on how generic we
-	// want our Entity class, maybe it's not renderable...
 	Vector2D position;       
 	bool renderable = true;
 };

@@ -15,652 +15,590 @@
 
 Map::Map() : Module(), mapLoaded(false), helpTexture(nullptr), showHelpTexture(false)
 {
-    name = "map";
+	name = "map";
 }
 
-// Destructor
 Map::~Map()
 {}
 
-// Called before render is available
 bool Map::Awake()
 {
-    name = "map";
-    LOG("Loading Map Parser");
+	name = "map";
+	LOG("Loading Map Parser");
 
-    return true;
+	return true;
 }
 
 bool Map::Start() {
 
-    helpTexture = Engine::GetInstance().textures->Load("Assets/Textures/help.png"); 
-    showHelpTexture = false;
-    
-    float fw = 0, fh = 0;
+	helpTexture = Engine::GetInstance().textures->Load("Assets/Textures/help.png"); 
+	showHelpTexture = false;
+	
+	float fw = 0, fh = 0;
 	if (SDL_GetTextureSize(helpTexture, &fw, &fh)) {
 		helpTextureRect.w = (int)fw;
 		helpTextureRect.h = (int)fh;
 		helpTextureRect.x = Engine::GetInstance().render->camera.w - (int)fw - 10; 
 		helpTextureRect.y = 10; 
 	}
-    
-    return true;
+	
+	return true;
 }
 
 bool Map::Update(float dt)
 {
-    bool ret = true;
+	bool ret = true;
 
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_H) == KEY_DOWN) {
+		showHelpTexture = !showHelpTexture;
+	}
 
-    if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_H) == KEY_DOWN) {
-        showHelpTexture = !showHelpTexture;
-    }
+	if (mapLoaded) {
 
-    if (mapLoaded) {
+		for (const auto& mapLayer : mapData.layers) {
 
-        // iterar todas las capas del mapa
-        for (const auto& mapLayer : mapData.layers) {
+			if (mapLayer->name == "Collisions")
+				continue;
 
-            // NUNCA dibujar la capa de colisiones
-            if (mapLayer->name == "Collisions")
-                continue;
+			Properties::Property* drawProp = mapLayer->properties.GetProperty("Draw");
 
-            Properties::Property* drawProp = mapLayer->properties.GetProperty("Draw");
+			if (drawProp == nullptr || drawProp->value == true)
+			{
+				for (int i = 0; i < mapData.height; i++) {
+					for (int j = 0; j < mapData.width; j++) {
 
-            // si no hay propiedad "Draw", o es true ? dibuja
-            if (drawProp == nullptr || drawProp->value == true)
-            {
-                for (int i = 0; i < mapData.height; i++) {
-                    for (int j = 0; j < mapData.width; j++) {
+						int gid = mapLayer->Get(i, j);
 
-                        int gid = mapLayer->Get(i, j);
+						if (gid != 0) {
 
-                        if (gid != 0) {
+							TileSet* tileSet = GetTilesetFromTileId(gid);
+							if (tileSet != nullptr && tileSet->texture != nullptr) {
+								SDL_Rect tileRect = tileSet->GetRect(gid);
+								Vector2D mapCoord = MapToWorld(i, j);
 
-                            TileSet* tileSet = GetTilesetFromTileId(gid);
-                            if (tileSet != nullptr && tileSet->texture != nullptr) {
-                                SDL_Rect tileRect = tileSet->GetRect(gid);
-                                Vector2D mapCoord = MapToWorld(i, j);
+								Engine::GetInstance().render->DrawTextureScaled(
+									tileSet->texture,
+									(int)mapCoord.getX(),
+									(int)mapCoord.getY(),
+									&tileRect,
+									renderScale
+								);
+							}
+						}
+					}
+				}
+			}
+		}
 
-                                Engine::GetInstance().render->DrawTextureScaled(
-                                    tileSet->texture,
-                                    (int)mapCoord.getX(),
-                                    (int)mapCoord.getY(),
-                                    &tileRect,
-                                    renderScale
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
+		if (showHelpTexture && helpTexture != nullptr) {
+			Engine::GetInstance().render->DrawTexture(helpTexture, helpTextureRect.x, helpTextureRect.y);
+		}
+	}
 
-        if (showHelpTexture && helpTexture != nullptr) {
-            Engine::GetInstance().render->DrawTexture(helpTexture, helpTextureRect.x, helpTextureRect.y);
-        }
-    }
-
-    return ret;
+	return ret;
 }
 
-// Implement function to the Tileset based on a tile id
 TileSet* Map::GetTilesetFromTileId(int gid) const
 {
 	TileSet* set = nullptr;
-    for(const auto& tileset : mapData.tilesets) {
-        set = tileset;
-        if (gid >= tileset->firstGid && gid < tileset->firstGid + tileset->tileCount) {
+	for(const auto& tileset : mapData.tilesets) {
+		set = tileset;
+		if (gid >= tileset->firstGid && gid < tileset->firstGid + tileset->tileCount) {
 			break;
-        }
+		}
 	}
-    return set;
+	return set;
 }
 
 void Map::UnloadMapData()
 {
 
-    // 0) Borrar colliders del mapa anterior
-    for (PhysBody* b : mapColliders)
-    {
-        if (b)
-            Engine::GetInstance().physics->DeletePhysBody(b);
-    }
-    mapColliders.clear();
+	for (PhysBody* b : mapColliders)
+	{
+		if (b)
+			Engine::GetInstance().physics->DeletePhysBody(b);
+	}
+	mapColliders.clear();
 
-    // 1) Tilesets + texturas
-    for (TileSet* ts : mapData.tilesets)
-    {
-        if (!ts) continue;
+	for (TileSet* ts : mapData.tilesets)
+	{
+		if (!ts) continue;
 
-        if (ts->texture != nullptr)
-        {
-            Engine::GetInstance().textures->UnLoad(ts->texture);
-            ts->texture = nullptr;
-        }
+		if (ts->texture != nullptr)
+		{
+			Engine::GetInstance().textures->UnLoad(ts->texture);
+			ts->texture = nullptr;
+		}
 
-        delete ts;
-    }
-    mapData.tilesets.clear();
+		delete ts;
+	}
+	mapData.tilesets.clear();
 
-    // 2) Capas
-    for (MapLayer* layer : mapData.layers)
-    {
-        delete layer;
-    }
-    mapData.layers.clear();
+	for (MapLayer* layer : mapData.layers)
+	{
+		delete layer;
+	}
+	mapData.layers.clear();
 
-    mapLoaded = false;
+	mapLoaded = false;
 }
 
 bool Map::CleanUp()
 {
-    LOG("Unloading map");
+	LOG("Unloading map");
 
-    // Descargar helpTexture (esto sí es “global” del módulo map)
-    if (helpTexture != nullptr)
-    {
-        Engine::GetInstance().textures->UnLoad(helpTexture);
-        helpTexture = nullptr;
-    }
+	if (helpTexture != nullptr)
+	{
+		Engine::GetInstance().textures->UnLoad(helpTexture);
+		helpTexture = nullptr;
+	}
 
-    // Limpiar datos del mapa
-    UnloadMapData();
+	UnloadMapData();
 
-    return true;
+	return true;
 }
 
-// Load new map
 bool Map::Load(std::string path, std::string fileName)
 {
-    hasPlayerSpawn = false;
-    playerSpawn = Vector2D(0, 0);
-    bool ret = false;
+	hasPlayerSpawn = false;
+	playerSpawn = Vector2D(0, 0);
+	bool ret = false;
 
-    // Si ya hay un mapa cargado, lo descargamos antes de cargar otro
-    if (mapLoaded || !mapData.layers.empty() || !mapData.tilesets.empty())
-    {
-        UnloadMapData();
-    }
+	if (mapLoaded || !mapData.layers.empty() || !mapData.tilesets.empty())
+	{
+		UnloadMapData();
+	}
 
-    // Assigns the name of the map file and the path
-    mapFileName = fileName;
-    mapPath = path;
-    std::string mapPathName = mapPath + mapFileName;
+	mapFileName = fileName;
+	mapPath = path;
+	std::string mapPathName = mapPath + mapFileName;
 
-    pugi::xml_document mapFileXML;
-    pugi::xml_parse_result result = mapFileXML.load_file(mapPathName.c_str());
+	pugi::xml_document mapFileXML;
+	pugi::xml_parse_result result = mapFileXML.load_file(mapPathName.c_str());
 
-    if(result == NULL)
+	if(result == NULL)
 	{
 		LOG("Could not load map xml file %s. pugi error: %s", mapPathName.c_str(), result.description());
 		ret = false;
-    }
-    else {
+	}
+	else {
 
-        // Implement LoadMap to load the map properties
-        // retrieve the paremeters of the <map> node and store the into the mapData struct
-        mapData.width = mapFileXML.child("map").attribute("width").as_int();
-        mapData.height = mapFileXML.child("map").attribute("height").as_int();
-        mapData.tileWidth = mapFileXML.child("map").attribute("tilewidth").as_int();
-        mapData.tileHeight = mapFileXML.child("map").attribute("tileheight").as_int();
+		mapData.width = mapFileXML.child("map").attribute("width").as_int();
+		mapData.height = mapFileXML.child("map").attribute("height").as_int();
+		mapData.tileWidth = mapFileXML.child("map").attribute("tilewidth").as_int();
+		mapData.tileHeight = mapFileXML.child("map").attribute("tileheight").as_int();
 
-        renderScale = 32.0f / (float)mapData.tileWidth;
+		renderScale = 32.0f / (float)mapData.tileWidth;
 
-        // Seguridad
-        if (renderScale <= 0.0f) renderScale = 1.0f;
+		if (renderScale <= 0.0f) renderScale = 1.0f;
 
-        LOG("Map renderScale = %.2f (tileWidth=%d)", renderScale, mapData.tileWidth);
+		LOG("Map renderScale = %.2f (tileWidth=%d)", renderScale, mapData.tileWidth);
 
-        // Implement the LoadTileSet function to load the tileset properties
-        //Iterate the Tileset
-        for(pugi::xml_node tilesetNode = mapFileXML.child("map").child("tileset");
-        tilesetNode != NULL;
-        tilesetNode = tilesetNode.next_sibling("tileset"))
-        {
-            TileSet* tileSet = new TileSet();
-            tileSet->firstGid = tilesetNode.attribute("firstgid").as_int();
+		for(pugi::xml_node tilesetNode = mapFileXML.child("map").child("tileset");
+		tilesetNode != NULL;
+		tilesetNode = tilesetNode.next_sibling("tileset"))
+		{
+			TileSet* tileSet = new TileSet();
+			tileSet->firstGid = tilesetNode.attribute("firstgid").as_int();
 
-            // --- CASO A: tileset EXTERNO (TSX) ---
-            if (tilesetNode.attribute("source"))
-            {
-                std::string tsxFile = tilesetNode.attribute("source").as_string();
-                std::string tsxPath = mapPath + tsxFile;
+			if (tilesetNode.attribute("source"))
+			{
+				std::string tsxFile = tilesetNode.attribute("source").as_string();
+				std::string tsxPath = mapPath + tsxFile;
 
-                pugi::xml_document tsxDoc;
-                pugi::xml_parse_result tsxRes = tsxDoc.load_file(tsxPath.c_str());
+				pugi::xml_document tsxDoc;
+				pugi::xml_parse_result tsxRes = tsxDoc.load_file(tsxPath.c_str());
 
-                if (tsxRes == NULL)
-                {
-                    LOG("Could not load TSX file %s. pugi error: %s", tsxPath.c_str(), tsxRes.description());
-                    delete tileSet;
-                    continue;
-                }
+				if (tsxRes == NULL)
+				{
+					LOG("Could not load TSX file %s. pugi error: %s", tsxPath.c_str(), tsxRes.description());
+					delete tileSet;
+					continue;
+				}
 
-                pugi::xml_node tsxRoot = tsxDoc.child("tileset");
-                tileSet->name = tsxRoot.attribute("name").as_string();
-                tileSet->tileWidth = tsxRoot.attribute("tilewidth").as_int();
-                tileSet->tileHeight = tsxRoot.attribute("tileheight").as_int();
-                tileSet->spacing = tsxRoot.attribute("spacing").as_int();
-                tileSet->margin = tsxRoot.attribute("margin").as_int();
-                tileSet->tileCount = tsxRoot.attribute("tilecount").as_int();
-                tileSet->columns = tsxRoot.attribute("columns").as_int();
+				pugi::xml_node tsxRoot = tsxDoc.child("tileset");
+				tileSet->name = tsxRoot.attribute("name").as_string();
+				tileSet->tileWidth = tsxRoot.attribute("tilewidth").as_int();
+				tileSet->tileHeight = tsxRoot.attribute("tileheight").as_int();
+				tileSet->spacing = tsxRoot.attribute("spacing").as_int();
+				tileSet->margin = tsxRoot.attribute("margin").as_int();
+				tileSet->tileCount = tsxRoot.attribute("tilecount").as_int();
+				tileSet->columns = tsxRoot.attribute("columns").as_int();
 
-                // La imagen está dentro del TSX y su ruta es RELATIVA al TSX
-                std::string imgName = tsxRoot.child("image").attribute("source").as_string();
+				std::string imgName = tsxRoot.child("image").attribute("source").as_string();
 
-                // Base dir del TSX (por si el tsx está en subcarpeta)
-                std::string tsxDirRel = "";
-                size_t slash = tsxFile.find_last_of("/\\");
-                if (slash != std::string::npos)
-                    tsxDirRel = tsxFile.substr(0, slash + 1);
+				std::string tsxDirRel = "";
+				size_t slash = tsxFile.find_last_of("/\\");
+				if (slash != std::string::npos)
+					tsxDirRel = tsxFile.substr(0, slash + 1);
 
-                // Ruta final (puede incluir ../ y funciona igual)
-                std::string imgFullPath = mapPath + tsxDirRel + imgName;
+				std::string imgFullPath = mapPath + tsxDirRel + imgName;
 
-                tileSet->texture = Engine::GetInstance().textures->Load(imgFullPath.c_str());
+				tileSet->texture = Engine::GetInstance().textures->Load(imgFullPath.c_str());
 
-                if (tileSet->texture == nullptr)
-                {
-                    LOG("ERROR: Tileset texture null. TSX=%s  IMG=%s", tsxPath.c_str(), imgFullPath.c_str());
-                }
+				if (tileSet->texture == nullptr)
+				{
+					LOG("ERROR: Tileset texture null. TSX=%s  IMG=%s", tsxPath.c_str(), imgFullPath.c_str());
+				}
 
-                LOG("TSX Tileset cargado: %s  firstgid=%d  tileCount=%d columns=%d",
-                    tileSet->name.c_str(), tileSet->firstGid, tileSet->tileCount, tileSet->columns);
-            }
-            // --- CASO B: tileset EMBEBIDO en TMX ---
-            else
-            {
-                tileSet->name = tilesetNode.attribute("name").as_string();
-                tileSet->tileWidth = tilesetNode.attribute("tilewidth").as_int();
-                tileSet->tileHeight = tilesetNode.attribute("tileheight").as_int();
-                tileSet->spacing = tilesetNode.attribute("spacing").as_int();
-                tileSet->margin = tilesetNode.attribute("margin").as_int();
-                tileSet->tileCount = tilesetNode.attribute("tilecount").as_int();
-                tileSet->columns = tilesetNode.attribute("columns").as_int();
+				LOG("TSX Tileset cargado: %s  firstgid=%d  tileCount=%d columns=%d",
+					tileSet->name.c_str(), tileSet->firstGid, tileSet->tileCount, tileSet->columns);
+			}
+			else
+			{
+				tileSet->name = tilesetNode.attribute("name").as_string();
+				tileSet->tileWidth = tilesetNode.attribute("tilewidth").as_int();
+				tileSet->tileHeight = tilesetNode.attribute("tileheight").as_int();
+				tileSet->spacing = tilesetNode.attribute("spacing").as_int();
+				tileSet->margin = tilesetNode.attribute("margin").as_int();
+				tileSet->tileCount = tilesetNode.attribute("tilecount").as_int();
+				tileSet->columns = tilesetNode.attribute("columns").as_int();
 
-                std::string imgName = tilesetNode.child("image").attribute("source").as_string();
-                tileSet->texture = Engine::GetInstance().textures->Load((mapPath + imgName).c_str());
+				std::string imgName = tilesetNode.child("image").attribute("source").as_string();
+				tileSet->texture = Engine::GetInstance().textures->Load((mapPath + imgName).c_str());
 
-                LOG("Tileset TMX cargado: %s  firstgid=%d  tileCount=%d columns=%d",
-                    tileSet->name.c_str(), tileSet->firstGid, tileSet->tileCount, tileSet->columns);
-            }
+				LOG("Tileset TMX cargado: %s  firstgid=%d  tileCount=%d columns=%d",
+					tileSet->name.c_str(), tileSet->firstGid, tileSet->tileCount, tileSet->columns);
+			}
 
-            // Si columns viene mal, lo recalculamos por seguridad
-            if (tileSet->columns <= 0)
-            {
-                float tw = 0, th = 0;
-                if (tileSet->texture && SDL_GetTextureSize(tileSet->texture, &tw, &th))
-                {
-                    int usableW = (int)tw - (tileSet->margin * 2);
-                    int step = tileSet->tileWidth + tileSet->spacing;
-                    if (step > 0) tileSet->columns = usableW / step;
-                }
-                if (tileSet->columns <= 0) tileSet->columns = 1;
-            }
+			if (tileSet->columns <= 0)
+			{
+				float tw = 0, th = 0;
+				if (tileSet->texture && SDL_GetTextureSize(tileSet->texture, &tw, &th))
+				{
+					int usableW = (int)tw - (tileSet->margin * 2);
+					int step = tileSet->tileWidth + tileSet->spacing;
+					if (step > 0) tileSet->columns = usableW / step;
+				}
+				if (tileSet->columns <= 0) tileSet->columns = 1;
+			}
 
-            mapData.tilesets.push_back(tileSet);
-        }
+			mapData.tilesets.push_back(tileSet);
+		}
 
-        // Iterate all layers in the TMX and load each of them
-        for (pugi::xml_node layerNode = mapFileXML.child("map").child("layer"); layerNode != NULL; layerNode = layerNode.next_sibling("layer")) {
+		for (pugi::xml_node layerNode = mapFileXML.child("map").child("layer"); layerNode != NULL; layerNode = layerNode.next_sibling("layer")) {
 
-            // Implement the load of a single layer 
-            // Load the attributes and saved in a new MapLayer
-            MapLayer* mapLayer = new MapLayer();
-            mapLayer->id = layerNode.attribute("id").as_int();
-            mapLayer->name = layerNode.attribute("name").as_string();
-            mapLayer->width = layerNode.attribute("width").as_int();
-            mapLayer->height = layerNode.attribute("height").as_int();
+			MapLayer* mapLayer = new MapLayer();
+			mapLayer->id = layerNode.attribute("id").as_int();
+			mapLayer->name = layerNode.attribute("name").as_string();
+			mapLayer->width = layerNode.attribute("width").as_int();
+			mapLayer->height = layerNode.attribute("height").as_int();
 
-            // Call Load Layer Properties
-            LoadProperties(layerNode, mapLayer->properties);
+			LoadProperties(layerNode, mapLayer->properties);
 
-            // Iterate over all the tiles and assign the values in the data array
-            for (pugi::xml_node tileNode = layerNode.child("data").child("tile"); tileNode != NULL; tileNode = tileNode.next_sibling("tile")) {
-                mapLayer->tiles.push_back(tileNode.attribute("gid").as_int());
-            }
+			for (pugi::xml_node tileNode = layerNode.child("data").child("tile"); tileNode != NULL; tileNode = tileNode.next_sibling("tile")) {
+				mapLayer->tiles.push_back(tileNode.attribute("gid").as_int());
+			}
 
-            // add the layer to the map
-            mapData.layers.push_back(mapLayer);
-        }
+			mapData.layers.push_back(mapLayer);
+		}
 
-        // Create colliders
-        // Assign collider type
-        // Iterate the layer and create colliders
-        for (const auto& mapLayer : mapData.layers)
-        {
-            if (mapLayer->name == "Collisions")
-            {
-                for (int i = 0; i < mapData.height; i++)
-                {
-                    for (int j = 0; j < mapData.width; j++)
-                    {
-                        int gid = mapLayer->Get(i, j);
-                        if (gid == 0) continue;
+		for (const auto& mapLayer : mapData.layers)
+		{
+			if (mapLayer->name == "Collisions")
+			{
+				for (int i = 0; i < mapData.height; i++)
+				{
+					for (int j = 0; j < mapData.width; j++)
+					{
+						int gid = mapLayer->Get(i, j);
+						if (gid == 0) continue;
 
-                        Vector2D pos = MapToWorld(i, j);
+						Vector2D pos = MapToWorld(i, j);
 
-                        // Creamos collider físico
-// tamaño de tile en “mundo” (32 siempre)
-                        int worldTileW = (int)(mapData.tileWidth * renderScale);
-                        int worldTileH = (int)(mapData.tileHeight * renderScale);
+						int worldTileW = (int)(mapData.tileWidth * renderScale);
+						int worldTileH = (int)(mapData.tileHeight * renderScale);
 
-                        PhysBody* c = Engine::GetInstance().physics->CreateRectangle(
-                            (int)pos.getX() + worldTileW / 2,
-                            (int)pos.getY() + worldTileH / 2,
-                            worldTileW, worldTileH,
-                            STATIC);
+						PhysBody* c = Engine::GetInstance().physics->CreateRectangle(
+							(int)pos.getX() + worldTileW / 2,
+							(int)pos.getY() + worldTileH / 2,
+							worldTileW, worldTileH,
+							STATIC);
 						mapColliders.push_back(c);
 
-                        // Averiguamos de qué tileset viene este gid
-                        TileSet* ts = GetTilesetFromTileId(gid);
-                        if (ts == nullptr)
-                        {
-                            c->ctype = ColliderType::UNKNOWN;
-                            continue;
-                        }
+						TileSet* ts = GetTilesetFromTileId(gid);
+						if (ts == nullptr)
+						{
+							c->ctype = ColliderType::UNKNOWN;
+							continue;
+						}
 
-                        // Si NO es MapMetadata, lo tratamos como suelo por defecto
-                        if (ts->name != "MapMetadata")
-                        {
-                            c->ctype = ColliderType::PLATFORM;
-                            continue;
-                        }
+						if (ts->name != "MapMetadata")
+						{
+							c->ctype = ColliderType::PLATFORM;
+							continue;
+						}
 
-                        // Si SÍ es MapMetadata, calculamos el índice local (0,1,2...)
-                        int localId = gid - ts->firstGid;
+						int localId = gid - ts->firstGid;
 
-                        // Asignamos tipo según el color
-                        switch (localId)
-                        {
-                        case 0: // rojo
-                            c->ctype = ColliderType::PLATFORM;
-                            break;
-                        case 1: // verde
-                            c->ctype = ColliderType::TOPE;
-                            break;
-                        case 2: // azul
-                            c->ctype = ColliderType::WALL;
-                            break;
-                        default:
-                            c->ctype = ColliderType::UNKNOWN;
-                            break;
-                        }
+						switch (localId)
+						{
+						case 0:
+							c->ctype = ColliderType::PLATFORM;
+							break;
+						case 1:
+							c->ctype = ColliderType::TOPE;
+							break;
+						case 2:
+							c->ctype = ColliderType::WALL;
+							break;
+						default:
+							c->ctype = ColliderType::UNKNOWN;
+							break;
+						}
 
-                        // DEBUG (PRUEBA)
-                        LOG("COLL TILE gid=%d  firstGid=%d  local=%d  type=%d",
-                            gid, ts->firstGid, localId, (int)c->ctype);
-                    }
-                }
-            }
-        }
+						LOG("COLL TILE gid=%d  firstGid=%d  local=%d  type=%d",
+							gid, ts->firstGid, localId, (int)c->ctype);
+					}
+				}
+			}
+		}
 
-        for (pugi::xml_node objGroup = mapFileXML.child("map").child("objectgroup");
-            objGroup;
-            objGroup = objGroup.next_sibling("objectgroup"))
-        {
-            std::string layerName = objGroup.attribute("name").as_string();
+		for (pugi::xml_node objGroup = mapFileXML.child("map").child("objectgroup");
+			objGroup;
+			objGroup = objGroup.next_sibling("objectgroup"))
+		{
+			std::string layerName = objGroup.attribute("name").as_string();
 
-            if (layerName == "Entities")
-            {
-                for (pugi::xml_node object = objGroup.child("object");
-                    object;
-                    object = object.next_sibling("object"))
-                {
-                    // Tiled puede identificar objetos por:
-                    // - name="..."
-                    // - type="..." (viejo)
-                    // - class="..." (nuevo, Tiled moderno)
-                    std::string objName = object.attribute("name").as_string();
-                    std::string objType = object.attribute("type").as_string();
-                    std::string objClass = object.attribute("class").as_string();
+			if (layerName == "Entities")
+			{
+				for (pugi::xml_node object = objGroup.child("object");
+					object;
+					object = object.next_sibling("object"))
+				{
+					std::string objName = object.attribute("name").as_string();
+					std::string objType = object.attribute("type").as_string();
+					std::string objClass = object.attribute("class").as_string();
 
-                    int x = (int)(object.attribute("x").as_int() * renderScale);
-                    int y = (int)(object.attribute("y").as_int() * renderScale);
-                    int w = (int)(object.attribute("width").as_int() * renderScale);
-                    int h = (int)(object.attribute("height").as_int() * renderScale);
+					int x = (int)(object.attribute("x").as_int() * renderScale);
+					int y = (int)(object.attribute("y").as_int() * renderScale);
+					int w = (int)(object.attribute("width").as_int() * renderScale);
+					int h = (int)(object.attribute("height").as_int() * renderScale);
 
-                    // ID principal: si tiene name, úsalo; si no, cae a class/type
-                    std::string id = !objName.empty() ? objName : (!objClass.empty() ? objClass : objType);
+					std::string id = !objName.empty() ? objName : (!objClass.empty() ? objClass : objType);
 
-                    // ---------------- PLAYER SPAWN ----------------
-                    // Queremos: Name="Player" y Class="Player" (pero aceptamos cualquiera de los dos)
-                    bool isPlayerSpawn =
-                        (id == "Player") ||
-                        (objName == "Player") ||
-                        (objClass == "Player") ||
-                        (objType == "Player");
+					bool isPlayerSpawn =
+						(id == "Player") ||
+						(objName == "Player") ||
+						(objClass == "Player") ||
+						(objType == "Player");
 
-                    if (isPlayerSpawn)
-                    {
-                        // Como es un rectángulo, usamos su centro
-                        int sx = x + (w > 0 ? w / 2 : 0);
-                        int sy = y + (h > 0 ? h / 2 : 0);
+					if (isPlayerSpawn)
+					{
+						int sx = x + (w > 0 ? w / 2 : 0);
+						int sy = y + (h > 0 ? h / 2 : 0);
 
-                        // Offset opcional desde Tiled: propiedad "offsetY" (por si quieres subirlo)
-                        int offsetY = 0;
-                        pugi::xml_node props = object.child("properties");
-                        for (pugi::xml_node p = props.child("property"); p; p = p.next_sibling("property"))
-                        {
-                            std::string pname = p.attribute("name").as_string();
-                            if (pname == "offsetY")
-                            {
-                                offsetY = (int)(p.attribute("value").as_int() * renderScale);
-                                break;
-                            }
-                        }
-                        sy += offsetY;
+						int offsetY = 0;
+						pugi::xml_node props = object.child("properties");
+						for (pugi::xml_node p = props.child("property"); p; p = p.next_sibling("property"))
+						{
+							std::string pname = p.attribute("name").as_string();
+							if (pname == "offsetY")
+							{
+								offsetY = (int)(p.attribute("value").as_int() * renderScale);
+								break;
+							}
+						}
+						sy += offsetY;
 
-                        playerSpawn = Vector2D((float)sx, (float)sy);
-                        hasPlayerSpawn = true;
+						playerSpawn = Vector2D((float)sx, (float)sy);
+						hasPlayerSpawn = true;
 
-                        LOG("PLAYER SPAWN encontrado: (%d,%d) [name='%s' class='%s' type='%s']",
-                            sx, sy, objName.c_str(), objClass.c_str(), objType.c_str());
+						LOG("PLAYER SPAWN encontrado: (%d,%d) [name='%s' class='%s' type='%s']",
+							sx, sy, objName.c_str(), objClass.c_str(), objType.c_str());
 
-                        continue;
-                    }
+						continue;
+					}
 
-                    // ---------------- RESTO ENTITIES ----------------
-                    if (id == "Slime")
-                    {
-                        auto e = Engine::GetInstance().entityManager->CreateEntity(EntityType::ENEMY);
-                        auto slime = std::dynamic_pointer_cast<Enemy>(e);
-                        if (slime) slime->SetPosition(x, y);
-                    }
-                    else if (id == "hoguera")
-                    {
-                        auto h = std::make_shared<hoguera>(x, y);
-                        Engine::GetInstance().entityManager->AddEntity(h);
-                        h->Awake();
-                        h->Start();
-                    }
-                    else if (id == "LifeUP")
-                    {
-                        auto life = std::make_shared<LifeUP>(x, y);
-                        Engine::GetInstance().entityManager->AddEntity(life);
-                        life->Awake();
-                        life->Start();
-                    }
-                    else if (id == "Gem")
-                    {
-                        auto gem = std::make_shared<Gem>(x, y);
-                        Engine::GetInstance().entityManager->AddEntity(gem);
-                        gem->Awake();
-                        gem->Start();
-                    }
-                }
-            }
+					if (id == "Slime")
+					{
+						auto e = Engine::GetInstance().entityManager->CreateEntity(EntityType::ENEMY);
+						auto slime = std::dynamic_pointer_cast<Enemy>(e);
+						if (slime) slime->SetPosition(x, y);
+					}
+					else if (id == "hoguera")
+					{
+						auto h = std::make_shared<hoguera>(x, y);
+						Engine::GetInstance().entityManager->AddEntity(h);
+						h->Awake();
+						h->Start();
+					}
+					else if (id == "LifeUP")
+					{
+						auto life = std::make_shared<LifeUP>(x, y);
+						Engine::GetInstance().entityManager->AddEntity(life);
+						life->Awake();
+						life->Start();
+					}
+					else if (id == "Gem")
+					{
+						auto gem = std::make_shared<Gem>(x, y);
+						Engine::GetInstance().entityManager->AddEntity(gem);
+						gem->Awake();
+						gem->Start();
+					}
+				}
+			}
 
-            // ---------- MAP CHANGE ----------
-            else if (layerName == "MapChange")
-            {
-                for (pugi::xml_node obj = objGroup.child("object");
-                    obj;
-                    obj = obj.next_sibling("object"))
-                {
-                    int ox = (int)(obj.attribute("x").as_int() * renderScale);
-                    int oy = (int)(obj.attribute("y").as_int() * renderScale);
-                    int ow = (int)(obj.attribute("width").as_int() * renderScale);
-                    int oh = (int)(obj.attribute("height").as_int() * renderScale);
+			else if (layerName == "MapChange")
+			{
+				for (pugi::xml_node obj = objGroup.child("object");
+					obj;
+					obj = obj.next_sibling("object"))
+				{
+					int ox = (int)(obj.attribute("x").as_int() * renderScale);
+					int oy = (int)(obj.attribute("y").as_int() * renderScale);
+					int ow = (int)(obj.attribute("width").as_int() * renderScale);
+					int oh = (int)(obj.attribute("height").as_int() * renderScale);
 
-                    int targetLevel = 2;
-                    int spawnX = 96;
-                    int spawnY = 650;
+					int targetLevel = 2;
+					int spawnX = 96;
+					int spawnY = 650;
 
-                    pugi::xml_node props = obj.child("properties");
-                    for (pugi::xml_node p = props.child("property"); p; p = p.next_sibling("property"))
-                    {
-                        std::string pname = p.attribute("name").as_string();
-                        std::string pvalue = p.attribute("value").as_string();
+					pugi::xml_node props = obj.child("properties");
+					for (pugi::xml_node p = props.child("property"); p; p = p.next_sibling("property"))
+					{
+						std::string pname = p.attribute("name").as_string();
+						std::string pvalue = p.attribute("value").as_string();
 
-                        if (pname == "targetLevel") targetLevel = atoi(pvalue.c_str());
-                        else if (pname == "spawnX") spawnX = atoi(pvalue.c_str());
-                        else if (pname == "spawnY") spawnY = atoi(pvalue.c_str());
-                    }
+						if (pname == "targetLevel") targetLevel = atoi(pvalue.c_str());
+						else if (pname == "spawnX") spawnX = atoi(pvalue.c_str());
+						else if (pname == "spawnY") spawnY = atoi(pvalue.c_str());
+					}
 
-                    spawnX = (int)(spawnX * renderScale);
-                    spawnY = (int)(spawnY * renderScale);
+					spawnX = (int)(spawnX * renderScale);
+					spawnY = (int)(spawnY * renderScale);
 
-                    auto trigger = std::make_shared<MapChangeTrigger>(ox, oy, ow, oh, targetLevel, spawnX, spawnY);
-                    Engine::GetInstance().entityManager->AddEntity(trigger);
-                    trigger->Awake();
-                    trigger->Start();
-                }
-            }
-        }
+					auto trigger = std::make_shared<MapChangeTrigger>(ox, oy, ow, oh, targetLevel, spawnX, spawnY);
+					Engine::GetInstance().entityManager->AddEntity(trigger);
+					trigger->Awake();
+					trigger->Start();
+				}
+			}
+		}
 
-        ret = true;
+		ret = true;
 
-        // LOG all the data loaded iterate all tilesetsand LOG everything
-        if (ret == true)
-        {
-            LOG("Successfully parsed map XML file :%s", fileName.c_str());
-            LOG("width : %d height : %d", mapData.width, mapData.height);
-            LOG("tile_width : %d tile_height : %d", mapData.tileWidth, mapData.tileHeight);
-            LOG("Tilesets----");
+		if (ret == true)
+		{
+			LOG("Successfully parsed map XML file :%s", fileName.c_str());
+			LOG("width : %d height : %d", mapData.width, mapData.height);
+			LOG("tile_width : %d tile_height : %d", mapData.tileWidth, mapData.tileHeight);
+			LOG("Tilesets----");
 
-            // iterate the tilesets
-            for (const auto& tileset : mapData.tilesets) {
-                LOG("name : %s firstgid : %d", tileset->name.c_str(), tileset->firstGid);
-                LOG("tile width : %d tile height : %d", tileset->tileWidth, tileset->tileHeight);
-                LOG("spacing : %d margin : %d", tileset->spacing, tileset->margin);
-            }
-            			
-            LOG("Layers----");
+			for (const auto& tileset : mapData.tilesets) {
+				LOG("name : %s firstgid : %d", tileset->name.c_str(), tileset->firstGid);
+				LOG("tile width : %d tile height : %d", tileset->tileWidth, tileset->tileHeight);
+				LOG("spacing : %d margin : %d", tileset->spacing, tileset->margin);
+			}
+			
+			LOG("Layers----");
 
-            for (const auto& layer : mapData.layers) {
-                LOG("id : %d name : %s", layer->id, layer->name.c_str());
+			for (const auto& layer : mapData.layers) {
+				LOG("id : %d name : %s", layer->id, layer->name.c_str());
 				LOG("Layer width : %d Layer height : %d", layer->width, layer->height);
-            }   
-        }
-        else {
-            LOG("Error while parsing map file: %s", mapPathName.c_str());
-        }
+			}   
+		}
+		else {
+			LOG("Error while parsing map file: %s", mapPathName.c_str());
+		}
 
-        if (mapFileXML) mapFileXML.reset();
+		if (mapFileXML) mapFileXML.reset();
 
-    }
+	}
 
-    mapLoaded = ret;
-    return ret;
+	mapLoaded = ret;
+	return ret;
 }
 
-// Create a method that translates x,y coordinates from map positions to world positions
 Vector2D Map::MapToWorld(int i, int j) const
 {
-    Vector2D ret;
+	Vector2D ret;
 
-    // Convertimos el grid del mapa a un “mundo” de tiles 32x32
-    float worldX = (float)(j * mapData.tileWidth) * renderScale;
-    float worldY = (float)(i * mapData.tileHeight) * renderScale;
+	float worldX = (float)(j * mapData.tileWidth) * renderScale;
+	float worldY = (float)(i * mapData.tileHeight) * renderScale;
 
-    ret.setX(worldX);
-    ret.setY(worldY);
+	ret.setX(worldX);
+	ret.setY(worldY);
 
-    return ret;
+	return ret;
 }
 
-// Load a group of properties from a node and fill a list with it
 bool Map::LoadProperties(pugi::xml_node& node, Properties& properties)
 {
-    bool ret = false;
+	bool ret = false;
 
-    for (pugi::xml_node propertieNode = node.child("properties").child("property"); propertieNode; propertieNode = propertieNode.next_sibling("property"))
-    {
-        Properties::Property* p = new Properties::Property();
-        p->name = propertieNode.attribute("name").as_string();
-        p->value = propertieNode.attribute("value").as_bool(); 
+	for (pugi::xml_node propertieNode = node.child("properties").child("property"); propertieNode; propertieNode = propertieNode.next_sibling("property"))
+	{
+		Properties::Property* p = new Properties::Property();
+		p->name = propertieNode.attribute("name").as_string();
+		p->value = propertieNode.attribute("value").as_bool(); 
 
-        properties.propertyList.push_back(p);
-    }
+		properties.propertyList.push_back(p);
+	}
 
-    return ret;
+	return ret;
 }
 
-// Create a method to get the map size in pixels
 Vector2D Map::GetMapSizeInPixels()
 {
-    Vector2D sizeInPixels;
-    sizeInPixels.setX((float)(mapData.width * mapData.tileWidth) * renderScale);
-    sizeInPixels.setY((float)(mapData.height * mapData.tileHeight) * renderScale);
-    return sizeInPixels;
+	Vector2D sizeInPixels;
+	sizeInPixels.setX((float)(mapData.width * mapData.tileWidth) * renderScale);
+	sizeInPixels.setY((float)(mapData.height * mapData.tileHeight) * renderScale);
+	return sizeInPixels;
 }
 
 void Map::WorldToMap(int x, int y, int& row, int& col) const
 {
-    if (mapData.tileWidth <= 0 || mapData.tileHeight <= 0) {
-        row = col = 0;
-        return;
-    }
+	if (mapData.tileWidth <= 0 || mapData.tileHeight <= 0) {
+		row = col = 0;
+		return;
+	}
 
-    float worldTileW = (float)mapData.tileWidth * renderScale;
-    float worldTileH = (float)mapData.tileHeight * renderScale;
+	float worldTileW = (float)mapData.tileWidth * renderScale;
+	float worldTileH = (float)mapData.tileHeight * renderScale;
 
-    col = (int)(x / worldTileW);
-    row = (int)(y / worldTileH);
+	col = (int)(x / worldTileW);
+	row = (int)(y / worldTileH);
 
-    // clamp
-    if (col < 0) col = 0;
-    if (row < 0) row = 0;
-    if (col >= mapData.width) col = mapData.width - 1;
-    if (row >= mapData.height) row = mapData.height - 1;
+	if (col < 0) col = 0;
+	if (row < 0) row = 0;
+	if (col >= mapData.width) col = mapData.width - 1;
+	if (row >= mapData.height) row = mapData.height - 1;
 }
 
 bool Map::IsCollisionTileAt(int row, int col) const
 {
-    if (row < 0 || col < 0 || row >= mapData.height || col >= mapData.width) return false;
+	if (row < 0 || col < 0 || row >= mapData.height || col >= mapData.width) return false;
 
-    for (const auto& layer : mapData.layers) {
-        if (layer->name == "Collisions") {
-            unsigned int gid = layer->Get(row, col);
-            if (gid != 0) return true;
-            // otherwise empty -> not collision
-            return false;
-        }
-    }
+	for (const auto& layer : mapData.layers) {
+		if (layer->name == "Collisions") {
+			unsigned int gid = layer->Get(row, col);
+			if (gid != 0) return true;
+			return false;
+		}
+	}
 
-    // If no Collisions layer present, assume not colliding
-    return false;
+	return false;
 }
 
 int Map::GetTileWidth() const
 {
-    return mapData.tileWidth;
+	return mapData.tileWidth;
 }
 
 int Map::GetTileHeight() const
 {
-    return mapData.tileHeight;
+	return mapData.tileHeight;
 }
 
 int Map::GetWidth() const
 {
-    return mapData.width;
+	return mapData.width;
 }
 
 int Map::GetHeight() const
 {
-    return mapData.height;
+	return mapData.height;
 }
 

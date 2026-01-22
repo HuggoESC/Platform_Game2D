@@ -18,7 +18,6 @@
 #define DEGTORAD 0.0174532925199432957f
 #define RADTODEG 57.295779513082320876f
 
-// types of bodies
 enum bodyType {
     DYNAMIC,
     STATIC,
@@ -41,7 +40,6 @@ enum class ColliderType {
     
 };
 
-// Small class to return to other modules to track position and rotation of physics bodies
 class PhysBody
 {
 public:
@@ -65,28 +63,23 @@ public:
     bool pendingDelete = false;
 };
 
-// Module Physics
 class Physics : public Module
 {
 public:
 
-    // Constructors & Destructors
     Physics();
     ~Physics();
 
-    // Main module steps
     bool Start();
     bool PreUpdate();
     bool PostUpdate();
     bool CleanUp();
 
-    // Create basic physics objects
     PhysBody* CreateRectangle(int x, int y, int width, int height, bodyType type);
     PhysBody* CreateCircle(int x, int y, int radious, bodyType type);
     PhysBody* CreateRectangleSensor(int x, int y, int width, int height, bodyType type);
     PhysBody* CreateChain(int x, int y, int* points, int size, bodyType type);
 
-    // Invoked from our event processing
     void BeginContact(b2ShapeId shapeA, b2ShapeId shapeB);
     void EndContact(b2ShapeId shapeA, b2ShapeId shapeB);
 
@@ -97,7 +90,6 @@ public:
     void DeletePhysBody(PhysBody* physBody);
     bool IsPendingToDelete(PhysBody* physBody);
 
-    // Velocity helpers 
     b2Vec2 GetLinearVelocity(const PhysBody* p) const;
     float  GetXVelocity(const PhysBody* p) const;
     float  GetYVelocity(const PhysBody* p) const;
@@ -107,24 +99,20 @@ public:
     void   SetXVelocity(PhysBody* p, float vx) const;
     void   SetYVelocity(PhysBody* p, float vy) const;
 
-    // Impulse helper 
     void   ApplyLinearImpulseToCenter(PhysBody* p, float ix, float iy, bool wake = true) const;
 
 private:
-    // helpers
     static b2BodyType ToB2Type(bodyType t);
     static void* ToUserData(PhysBody* p) { return (void*)p; }
     static PhysBody* FromUserData(void* ud) { return (PhysBody*)ud; }
     static PhysBody* BodyToPhys(b2BodyId b) { return FromUserData(b2Body_GetUserData(b)); }
 
-    //  Debug draw callbacks 
     static void DrawSegmentCb(b2Vec2 p1, b2Vec2 p2, b2HexColor color, void* ctx);
     static void DrawPolygonCb(const b2Vec2* verts, int count, b2HexColor color, void* ctx);
     static void DrawSolidPolygonCb(b2Transform xf, const b2Vec2* verts, int count, float radius, b2HexColor color, void* ctx);
     static void DrawCircleCb(b2Vec2 center, float radius, b2HexColor color, void* ctx);
     static void DrawSolidCircleCb(b2Transform xf, float radius, b2HexColor color, void* ctx);
 
-    //  Defensive no-op stubs 
     static void DrawSolidCapsuleStub(b2Vec2 a, b2Vec2 b, float r, b2HexColor c, void* ctx);
     static void DrawPointStub(b2Vec2 p, float size, b2HexColor c, void* ctx);
     static void DrawStringStub(b2Vec2 p, const char* s, b2HexColor c, void* ctx);

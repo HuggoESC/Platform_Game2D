@@ -6,7 +6,6 @@
 
 class PhysBody;
 
-// Collectible Gem (from Tiled: name/class "Gem")
 class Gem : public Entity
 {
 public:

@@ -15,351 +15,325 @@
 
 Physics::Physics() : Module()
 {
-    world = b2_nullWorldId;
-    debug = false; // toggle with F9
+	world = b2_nullWorldId;
+	debug = false;
 }
 
-// Destructor
 Physics::~Physics()
 {
-    
+	
 }
 
 bool Physics::Start()
 {
-    LOG("Creating Physics 2D environment");
 
-    // Create a new World (3.x uses world defs)
-    b2WorldDef wdef = b2DefaultWorldDef();
-    wdef.gravity.x = GRAVITY_X;
-    wdef.gravity.y = -GRAVITY_Y;
-    world = b2CreateWorld(&wdef);
+	b2WorldDef wdef = b2DefaultWorldDef();
+	wdef.gravity.x = GRAVITY_X;
+	wdef.gravity.y = -GRAVITY_Y;
+	world = b2CreateWorld(&wdef);
 
-    return true;
+	return true;
 }
 
-// 
 bool Physics::PreUpdate()
 {
-    bool ret = true;
+	bool ret = true;
 
-    if (Engine::GetInstance().scene->IsPaused())
-        return true;
+	if (Engine::GetInstance().scene->IsPaused())
+		return true;
 
-    float dt = Engine::GetInstance().GetDt() / 1000.0f;
-    b2World_Step(world, dt, 4);
+	float dt = Engine::GetInstance().GetDt() / 1000.0f;
+	b2World_Step(world, dt, 4);
 
-    // Si estamos cargando o queremos ignorar contactos este frame, no procesamos eventos
-    if (isLoading || ignoreContactSteps > 0)
-    {
-        if (ignoreContactSteps > 0) ignoreContactSteps--;
-        return true;
-    }
+	if (isLoading || ignoreContactSteps > 0)
+	{
+		if (ignoreContactSteps > 0) ignoreContactSteps--;
+		return true;
+	}
 
-    // --- SENSOR EVENTS (LifeUp, hoguera, etc.) ---
-    const b2SensorEvents sensorEvents = b2World_GetSensorEvents(world);
+	const b2SensorEvents sensorEvents = b2World_GetSensorEvents(world);
 
-    // begin
-    for (int i = 0; i < sensorEvents.beginCount; ++i)
-    {
-        const b2SensorBeginTouchEvent& e = sensorEvents.beginEvents[i];
-        if (!b2Shape_IsValid(e.sensorShapeId) || !b2Shape_IsValid(e.visitorShapeId)) continue;
+	for (int i = 0; i < sensorEvents.beginCount; ++i)
+	{
+		const b2SensorBeginTouchEvent& e = sensorEvents.beginEvents[i];
+		if (!b2Shape_IsValid(e.sensorShapeId) || !b2Shape_IsValid(e.visitorShapeId)) continue;
 
-        BeginContact(e.sensorShapeId, e.visitorShapeId);
-    }
+		BeginContact(e.sensorShapeId, e.visitorShapeId);
+	}
 
-    // end
-    for (int i = 0; i < sensorEvents.endCount; ++i)
-    {
-        const b2SensorEndTouchEvent& e = sensorEvents.endEvents[i];
-        if (!b2Shape_IsValid(e.sensorShapeId) || !b2Shape_IsValid(e.visitorShapeId)) continue;
+	for (int i = 0; i < sensorEvents.endCount; ++i)
+	{
+		const b2SensorEndTouchEvent& e = sensorEvents.endEvents[i];
+		if (!b2Shape_IsValid(e.sensorShapeId) || !b2Shape_IsValid(e.visitorShapeId)) continue;
 
-        EndContact(e.sensorShapeId, e.visitorShapeId);
-    }
+		EndContact(e.sensorShapeId, e.visitorShapeId);
+	}
 
-    // --- CONTACT EVENTS (suelo, paredes, enemigo slime, etc.) ---
-    const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
+	const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
 
-    // begin
-    for (int i = 0; i < contactEvents.beginCount; ++i)
-    {
-        const b2ContactBeginTouchEvent& e = contactEvents.beginEvents[i];
-        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+	for (int i = 0; i < contactEvents.beginCount; ++i)
+	{
+		const b2ContactBeginTouchEvent& e = contactEvents.beginEvents[i];
+		if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
 
-        // evita duplicar sensores (sensores ya están arriba)
-        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
+		if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
 
-        BeginContact(e.shapeIdA, e.shapeIdB);
-    }
+		BeginContact(e.shapeIdA, e.shapeIdB);
+	}
 
-    // end
-    for (int i = 0; i < contactEvents.endCount; ++i)
-    {
-        const b2ContactEndTouchEvent& e = contactEvents.endEvents[i];
-        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+	for (int i = 0; i < contactEvents.endCount; ++i)
+	{
+		const b2ContactEndTouchEvent& e = contactEvents.endEvents[i];
+		if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
 
-        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
+		if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
 
-        EndContact(e.shapeIdA, e.shapeIdB);
-    }
+		EndContact(e.shapeIdA, e.shapeIdB);
+	}
 
-    // --- CONTACT EVENTS (solo para colisiones NO sensor, si tu Box2D los soporta) ---
-#ifdef B2_ENABLE_CONTACT_EVENTS  // si tu proyecto no tiene este define, puedes quitar este ifdef
-    const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
+#ifdef B2_ENABLE_CONTACT_EVENTS
+	const b2ContactEvents contactEvents = b2World_GetContactEvents(world);
 
-    // begin
-    for (int i = 0; i < contactEvents.beginCount; ++i)
-    {
-        const b2ContactBeginTouchEvent& e = contactEvents.beginEvents[i];
-        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+	for (int i = 0; i < contactEvents.beginCount; ++i)
+	{
+		const b2ContactBeginTouchEvent& e = contactEvents.beginEvents[i];
+		if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
 
-        // ✅ Evitar duplicar sensores (los sensores ya se manejan arriba)
-        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
+		if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
 
-        BeginContact(e.shapeIdA, e.shapeIdB);
-    }
+		BeginContact(e.shapeIdA, e.shapeIdB);
+	}
 
-    // end
-    for (int i = 0; i < contactEvents.endCount; ++i)
-    {
-        const b2ContactEndTouchEvent& e = contactEvents.endEvents[i];
-        if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
+	for (int i = 0; i < contactEvents.endCount; ++i)
+	{
+		const b2ContactEndTouchEvent& e = contactEvents.endEvents[i];
+		if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
 
-        if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
+		if (b2Shape_IsSensor(e.shapeIdA) || b2Shape_IsSensor(e.shapeIdB)) continue;
 
-        EndContact(e.shapeIdA, e.shapeIdB);
-    }
+		EndContact(e.shapeIdA, e.shapeIdB);
+	}
 #endif
 
 
-    return ret;
+	return ret;
 }
 
 PhysBody* Physics::CreateRectangle(int x, int y, int width, int height, bodyType type)
 {
-    b2BodyDef def = b2DefaultBodyDef();
-    def.type = ToB2Type(type);
-    def.position = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
+	b2BodyDef def = b2DefaultBodyDef();
+	def.type = ToB2Type(type);
+	def.position = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
 
-    b2BodyId b = b2CreateBody(world, &def);
+	b2BodyId b = b2CreateBody(world, &def);
 
-    b2Polygon box = b2MakeBox(PIXEL_TO_METERS(width) * 0.5f, PIXEL_TO_METERS(height) * 0.5f);
-    b2ShapeDef sdef = b2DefaultShapeDef();
-    sdef.density = 1.0f;
-    sdef.enableContactEvents = true;   // contact begin/end for this shape
-    sdef.enableSensorEvents = true;   // so it can participate in sensor overlaps
+	b2Polygon box = b2MakeBox(PIXEL_TO_METERS(width) * 0.5f, PIXEL_TO_METERS(height) * 0.5f);
+	b2ShapeDef sdef = b2DefaultShapeDef();
+	sdef.density = 1.0f;
+	sdef.enableContactEvents = true;
+	sdef.enableSensorEvents = true;
 
-    b2CreatePolygonShape(b, &sdef, &box);
+	b2CreatePolygonShape(b, &sdef, &box);
 
-    PhysBody* pbody = new PhysBody();
-    pbody->body = b;
-    b2Body_SetUserData(b, ToUserData(pbody));
+	PhysBody* pbody = new PhysBody();
+	pbody->body = b;
+	b2Body_SetUserData(b, ToUserData(pbody));
 
-    return pbody;
+	return pbody;
 }
 
 PhysBody* Physics::CreateCircle(int x, int y, int radious, bodyType type)
 {
-    b2BodyDef def = b2DefaultBodyDef();
-    def.type = ToB2Type(type);
-    def.position = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
+	b2BodyDef def = b2DefaultBodyDef();
+	def.type = ToB2Type(type);
+	def.position = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
 
-    b2BodyId b = b2CreateBody(world, &def);
+	b2BodyId b = b2CreateBody(world, &def);
 
-    b2Circle circle;
-    circle.center = { 0.0f, 0.0f };
-    circle.radius = PIXEL_TO_METERS(radious);
-    b2ShapeDef sdef = b2DefaultShapeDef();
-    sdef.density = 1.0f;
-    sdef.enableContactEvents = true;
-    sdef.enableSensorEvents = true;
+	b2Circle circle;
+	circle.center = { 0.0f, 0.0f };
+	circle.radius = PIXEL_TO_METERS(radious);
+	b2ShapeDef sdef = b2DefaultShapeDef();
+	sdef.density = 1.0f;
+	sdef.enableContactEvents = true;
+	sdef.enableSensorEvents = true;
 
-    b2CreateCircleShape(b, &sdef, &circle);
+	b2CreateCircleShape(b, &sdef, &circle);
 
-    PhysBody* pbody = new PhysBody();
-    pbody->body = b;
-    b2Body_SetUserData(b, ToUserData(pbody));
-    return pbody;
+	PhysBody* pbody = new PhysBody();
+	pbody->body = b;
+	b2Body_SetUserData(b, ToUserData(pbody));
+	return pbody;
 }
 
 PhysBody* Physics::CreateRectangleSensor(int x, int y, int width, int height, bodyType type)
 {
-    b2BodyDef def = b2DefaultBodyDef();
-    def.type = ToB2Type(type);
-    def.position = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
+	b2BodyDef def = b2DefaultBodyDef();
+	def.type = ToB2Type(type);
+	def.position = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
 
-    b2BodyId b = b2CreateBody(world, &def);
+	b2BodyId b = b2CreateBody(world, &def);
 
-    b2Polygon box = b2MakeBox(PIXEL_TO_METERS(width) * 0.5f, PIXEL_TO_METERS(height) * 0.5f);
-    b2ShapeDef sdef = b2DefaultShapeDef();
-    sdef.density = 1.0f;
-    sdef.isSensor = true; 
-    sdef.enableContactEvents = false;
-    sdef.enableSensorEvents = true;
+	b2Polygon box = b2MakeBox(PIXEL_TO_METERS(width) * 0.5f, PIXEL_TO_METERS(height) * 0.5f);
+	b2ShapeDef sdef = b2DefaultShapeDef();
+	sdef.density = 1.0f;
+	sdef.isSensor = true;
+	sdef.enableContactEvents = false;
+	sdef.enableSensorEvents = true;
 
-    b2CreatePolygonShape(b, &sdef, &box);
+	b2CreatePolygonShape(b, &sdef, &box);
 
-    PhysBody* pbody = new PhysBody();
-    pbody->body = b;
-    b2Body_SetUserData(b, ToUserData(pbody));
-    return pbody;
+	PhysBody* pbody = new PhysBody();
+	pbody->body = b;
+	b2Body_SetUserData(b, ToUserData(pbody));
+	return pbody;
 }
 
 PhysBody* Physics::CreateChain(int x, int y, int* points, int size, bodyType type)
 {
-    b2BodyDef def = b2DefaultBodyDef();
-    def.type = ToB2Type(type);
-    def.position = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
-    b2BodyId b = b2CreateBody(world, &def);
+	b2BodyDef def = b2DefaultBodyDef();
+	def.type = ToB2Type(type);
+	def.position = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
+	b2BodyId b = b2CreateBody(world, &def);
 
-    const int count = size / 2;
-    std::vector<b2Vec2> verts(count);
-    for (int i = 0; i < count; ++i)
-    {
-        verts[i].x = PIXEL_TO_METERS(points[i * 2 + 0]);
-        verts[i].y = PIXEL_TO_METERS(points[i * 2 + 1]);
-    }
+	const int count = size / 2;
+	std::vector<b2Vec2> verts(count);
+	for (int i = 0; i < count; ++i)
+	{
+		verts[i].x = PIXEL_TO_METERS(points[i * 2 + 0]);
+		verts[i].y = PIXEL_TO_METERS(points[i * 2 + 1]);
+	}
 
-    b2ChainDef cdef = b2DefaultChainDef();
-    cdef.points = verts.data();
-    cdef.count = count;
-    cdef.isLoop = true;
+	b2ChainDef cdef = b2DefaultChainDef();
+	cdef.points = verts.data();
+	cdef.count = count;
+	cdef.isLoop = true;
 
-    cdef.enableSensorEvents = false; 
+	cdef.enableSensorEvents = false;
 
-    b2CreateChain(b, &cdef);
+	b2CreateChain(b, &cdef);
 
-    const int shapeCount = b2Body_GetShapeCount(b);
-    if (shapeCount > 0)
-    {
-        std::vector<b2ShapeId> shapes(shapeCount);
-        b2Body_GetShapes(b, shapes.data(), shapeCount);
+	const int shapeCount = b2Body_GetShapeCount(b);
+	if (shapeCount > 0)
+	{
+		std::vector<b2ShapeId> shapes(shapeCount);
+		b2Body_GetShapes(b, shapes.data(), shapeCount);
 
-        for (int i = 0; i < shapeCount; ++i)
-        {
-           
-            b2Shape_EnableContactEvents(shapes[i], true);
-        }
-    }
+		for (int i = 0; i < shapeCount; ++i)
+		{
 
-    PhysBody* pbody = new PhysBody();
-    pbody->body = b;
-    b2Body_SetUserData(b, ToUserData(pbody));
-    return pbody;
+			b2Shape_EnableContactEvents(shapes[i], true);
+		}
+	}
+
+	PhysBody* pbody = new PhysBody();
+	pbody->body = b;
+	b2Body_SetUserData(b, ToUserData(pbody));
+	return pbody;
 }
 
-// PostUpdate
 bool Physics::PostUpdate()
 {
-    bool ret = true;
+	bool ret = true;
 
-    // Activate or deactivate debug mode
-    if (Engine::GetInstance().input.get()->GetKey(SDL_SCANCODE_F9) == KEY_DOWN)
-        debug = !debug;
+	if (Engine::GetInstance().input.get()->GetKey(SDL_SCANCODE_F9) == KEY_DOWN)
+		debug = !debug;
 
-    // Debug draw via Box2D 3.x callbacks
-    if (debug)
-    {
-        if (B2_IS_NULL(world) == false)
-        {
-            b2DebugDraw dd = {};
-            dd.context = this;
-            dd.drawShapes = true;
-            dd.drawJoints = true;   
-            dd.drawBounds = true;   
-            dd.drawContacts = true;  
+	if (debug)
+	{
+		if (B2_IS_NULL(world) == false)
+		{
+			b2DebugDraw dd = {};
+			dd.context = this;
+			dd.drawShapes = true;
+			dd.drawJoints = true;
+			dd.drawBounds = true;
+			dd.drawContacts = true;
 
-            // Implemented callbacks
-            dd.DrawSegmentFcn = &Physics::DrawSegmentCb;
-            dd.DrawPolygonFcn = &Physics::DrawPolygonCb;
-            dd.DrawSolidPolygonFcn = &Physics::DrawSolidPolygonCb;
-            dd.DrawCircleFcn = &Physics::DrawCircleCb;
-            dd.DrawSolidCircleFcn = &Physics::DrawSolidCircleCb;
+			dd.DrawSegmentFcn = &Physics::DrawSegmentCb;
+			dd.DrawPolygonFcn = &Physics::DrawPolygonCb;
+			dd.DrawSolidPolygonFcn = &Physics::DrawSolidPolygonCb;
+			dd.DrawCircleFcn = &Physics::DrawCircleCb;
+			dd.DrawSolidCircleFcn = &Physics::DrawSolidCircleCb;
 
-            // Defensive stubs
-            dd.DrawSolidCapsuleFcn = &Physics::DrawSolidCapsuleStub; 
-            dd.DrawPointFcn = &Physics::DrawPointStub;
-            dd.DrawStringFcn = &Physics::DrawStringStub;
-            dd.DrawTransformFcn = &Physics::DrawTransformStub;
+			dd.DrawSolidCapsuleFcn = &Physics::DrawSolidCapsuleStub;
+			dd.DrawPointFcn = &Physics::DrawPointStub;
+			dd.DrawStringFcn = &Physics::DrawStringStub;
+			dd.DrawTransformFcn = &Physics::DrawTransformStub;
 
-            b2World_Draw(world, &dd);
-        }
-    }
+			b2World_Draw(world, &dd);
+		}
+	}
 
-    for (PhysBody* physBody : bodiesToDelete)
-    {
-        if (!physBody) continue;
+	for (PhysBody* physBody : bodiesToDelete)
+	{
+		if (!physBody) continue;
 
-        if (!B2_IS_NULL(physBody->body))
-        {
-            b2DestroyBody(physBody->body);
-            physBody->body = b2_nullBodyId;
-        }
+		if (!B2_IS_NULL(physBody->body))
+		{
+			b2DestroyBody(physBody->body);
+			physBody->body = b2_nullBodyId;
+		}
 
-        delete physBody; // <- CLAVE: libera PhysBody
-    }
-    bodiesToDelete.clear();
+		delete physBody;
+	}
+	bodiesToDelete.clear();
 
-    return ret;
+	return ret;
 }
 
-// Called before quitting
 bool Physics::CleanUp()
 {
-    LOG("Destroying physics world");
 
-    if (!B2_IS_NULL(world))
-    {
-        b2DestroyWorld(world);
-        world = b2_nullWorldId;
-    }
+	if (!B2_IS_NULL(world))
+	{
+		b2DestroyWorld(world);
+		world = b2_nullWorldId;
+	}
 
-    return true;
+	return true;
 }
 
 void Physics::BeginContact(b2ShapeId shapeA, b2ShapeId shapeB)
 {
 
 	if (isLoading) return;
-    if (ignoreContactSteps > 0) return;
+	if (ignoreContactSteps > 0) return;
 
-    if (!b2Shape_IsValid(shapeA) || !b2Shape_IsValid(shapeB)) return;
+	if (!b2Shape_IsValid(shapeA) || !b2Shape_IsValid(shapeB)) return;
 
-    b2BodyId bodyA = b2Shape_GetBody(shapeA);
-    b2BodyId bodyB = b2Shape_GetBody(shapeB);
-    if (B2_IS_NULL(bodyA) || B2_IS_NULL(bodyB)) return;
+	b2BodyId bodyA = b2Shape_GetBody(shapeA);
+	b2BodyId bodyB = b2Shape_GetBody(shapeB);
+	if (B2_IS_NULL(bodyA) || B2_IS_NULL(bodyB)) return;
 
-    PhysBody* physA = BodyToPhys(bodyA);
-    PhysBody* physB = BodyToPhys(bodyB);
-    if (!physA || !physB) return;
+	PhysBody* physA = BodyToPhys(bodyA);
+	PhysBody* physB = BodyToPhys(bodyB);
+	if (!physA || !physB) return;
 
-    // --- physA ---
-    if (physA && !IsPendingToDelete(physA))
-    {
-        auto la = physA->listener.lock();
-        if (la && la->active)
-        {
-            la->OnCollision(physA, physB);
-        }
-    }
-
-    // --- physB ---
-    if (physB && !IsPendingToDelete(physB))
-    {
-        auto lb = physB->listener.lock();
-        if (lb && lb->active)
-        {
-            lb->OnCollision(physB, physA);
-        }
-    }
-
-    if (b2Shape_IsSensor(shapeA) || b2Shape_IsSensor(shapeB))
-    {
-        // Sensors do not generate normal contacts
-        return;
+	if (physA && !IsPendingToDelete(physA))
+	{
+		auto la = physA->listener.lock();
+		if (la && la->active)
+		{
+			la->OnCollision(physA, physB);
+		}
 	}
 
-    LOG("CONTACT --> A:%d  B:%d", (int)physA->ctype, (int)physB->ctype); //PRUEBA   
+	if (physB && !IsPendingToDelete(physB))
+	{
+		auto lb = physB->listener.lock();
+		if (lb && lb->active)
+		{
+			lb->OnCollision(physB, physA);
+		}
+	}
+
+	if (b2Shape_IsSensor(shapeA) || b2Shape_IsSensor(shapeB))
+	{
+		return;
+	}
+
+	LOG("CONTACT --> A:%d  B:%d", (int)physA->ctype, (int)physB->ctype);
 }
 
 void Physics::EndContact(b2ShapeId shapeA, b2ShapeId shapeB)
@@ -367,229 +341,213 @@ void Physics::EndContact(b2ShapeId shapeA, b2ShapeId shapeB)
 	if (isLoading) return;
 	if (ignoreContactSteps > 0) return;
 
-    if (!b2Shape_IsValid(shapeA) || !b2Shape_IsValid(shapeB)) return;
+	if (!b2Shape_IsValid(shapeA) || !b2Shape_IsValid(shapeB)) return;
 
-    b2BodyId bodyA = b2Shape_GetBody(shapeA);
-    b2BodyId bodyB = b2Shape_GetBody(shapeB);
-    if (B2_IS_NULL(bodyA) || B2_IS_NULL(bodyB)) return;
+	b2BodyId bodyA = b2Shape_GetBody(shapeA);
+	b2BodyId bodyB = b2Shape_GetBody(shapeB);
+	if (B2_IS_NULL(bodyA) || B2_IS_NULL(bodyB)) return;
 
-    PhysBody* physA = BodyToPhys(bodyA);
-    PhysBody* physB = BodyToPhys(bodyB);
-    if (!physA || !physB) return;
-    if (IsPendingToDelete(physA) || IsPendingToDelete(physB)) return;
+	PhysBody* physA = BodyToPhys(bodyA);
+	PhysBody* physB = BodyToPhys(bodyB);
+	if (!physA || !physB) return;
+	if (IsPendingToDelete(physA) || IsPendingToDelete(physB)) return;
 
-    if (!IsPendingToDelete(physA))
-    {
-        auto la = physA->listener.lock();
-        if (la) la->OnCollisionEnd(physA, physB);
-    }
+	if (!IsPendingToDelete(physA))
+	{
+		auto la = physA->listener.lock();
+		if (la) la->OnCollisionEnd(physA, physB);
+	}
 
-    if (!IsPendingToDelete(physB))
-    {
-        auto lb = physB->listener.lock();
-        if (lb) lb->OnCollisionEnd(physB, physA);
-    }
+	if (!IsPendingToDelete(physB))
+	{
+		auto lb = physB->listener.lock();
+		if (lb) lb->OnCollisionEnd(physB, physA);
+	}
 }
 
 
 
 void Physics::DeletePhysBody(PhysBody* physBody)
 {
-    if (B2_IS_NULL(world)) return;
-    if (!physBody) return;
+	if (B2_IS_NULL(world)) return;
+	if (!physBody) return;
 
-    // Siempre desarmar callbacks
-    physBody->listener.reset();
-    if (!B2_IS_NULL(physBody->body))
-    {
-        b2Body_SetUserData(physBody->body, nullptr);
-    }
+	physBody->listener.reset();
+	if (!B2_IS_NULL(physBody->body))
+	{
+		b2Body_SetUserData(physBody->body, nullptr);
+	}
 
-    // ✅ Si ya está marcado, no lo encoles otra vez
-    if (physBody->pendingDelete) return;
+	if (physBody->pendingDelete) return;
 
-    // ✅ CLAVE: marcar antes de encolar
-    physBody->pendingDelete = true;
-    bodiesToDelete.push_back(physBody);
+	physBody->pendingDelete = true;
+	bodiesToDelete.push_back(physBody);
 }
 
 
 bool Physics::IsPendingToDelete(PhysBody* physBody)
 {
-    return physBody && physBody->pendingDelete;
+	return physBody && physBody->pendingDelete;
 }
 
 
-// Velocity helpers
 b2Vec2 Physics::GetLinearVelocity(const PhysBody* p) const
 {
-    return b2Body_GetLinearVelocity(p->body);
+	return b2Body_GetLinearVelocity(p->body);
 }
 
 float Physics::GetXVelocity(const PhysBody* p) const
 {
-    return b2Body_GetLinearVelocity(p->body).x;
+	return b2Body_GetLinearVelocity(p->body).x;
 }
 
 float Physics::GetYVelocity(const PhysBody* p) const
 {
-    return b2Body_GetLinearVelocity(p->body).y;
+	return b2Body_GetLinearVelocity(p->body).y;
 }
 
 void Physics::SetLinearVelocity(PhysBody* p, const b2Vec2& v) const
 {
-    b2Body_SetLinearVelocity(p->body, v);
+	b2Body_SetLinearVelocity(p->body, v);
 }
 
 void Physics::SetLinearVelocity(PhysBody* p, float vx, float vy) const
 {
-    b2Vec2 v = { vx, vy };
-    b2Body_SetLinearVelocity(p->body, v);
+	b2Vec2 v = { vx, vy };
+	b2Body_SetLinearVelocity(p->body, v);
 }
 
 void Physics::SetXVelocity(PhysBody* p, float vx) const
 {
-    b2Vec2 v = b2Body_GetLinearVelocity(p->body);
-    v.x = vx;
-    b2Body_SetLinearVelocity(p->body, v);
+	b2Vec2 v = b2Body_GetLinearVelocity(p->body);
+	v.x = vx;
+	b2Body_SetLinearVelocity(p->body, v);
 }
 
 void Physics::SetYVelocity(PhysBody* p, float vy) const
 {
-    b2Vec2 v = b2Body_GetLinearVelocity(p->body);
-    v.y = vy;
-    b2Body_SetLinearVelocity(p->body, v);
+	b2Vec2 v = b2Body_GetLinearVelocity(p->body);
+	v.y = vy;
+	b2Body_SetLinearVelocity(p->body, v);
 }
 
-//  Impulse helper
 void Physics::ApplyLinearImpulseToCenter(PhysBody* p, float ix, float iy, bool wake) const
 {
-    b2Vec2 imp = { ix, iy };
-    b2Body_ApplyLinearImpulseToCenter(p->body, imp, wake);
+	b2Vec2 imp = { ix, iy };
+	b2Body_ApplyLinearImpulseToCenter(p->body, imp, wake);
 }
 
-// PhysBody methods
 void PhysBody::GetPosition(int& x, int& y) const
 {
-    b2Vec2 pos = b2Body_GetPosition(body);
-    x = METERS_TO_PIXELS(pos.x);
-    y = METERS_TO_PIXELS(pos.y);
+	b2Vec2 pos = b2Body_GetPosition(body);
+	x = METERS_TO_PIXELS(pos.x);
+	y = METERS_TO_PIXELS(pos.y);
 }
 
 void PhysBody::SetPosition(int x, int y)
 {
-    b2Vec2 pos = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
-    b2Body_SetTransform(body, pos, b2MakeRot(0));
+	b2Vec2 pos = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
+	b2Body_SetTransform(body, pos, b2MakeRot(0));
 }
 
 float PhysBody::GetRotation() const
 {
-    b2Transform xf = b2Body_GetTransform(body);
-    return RADTODEG * b2Rot_GetAngle(xf.q);
+	b2Transform xf = b2Body_GetTransform(body);
+	return RADTODEG * b2Rot_GetAngle(xf.q);
 }
 
 bool PhysBody::Contains(int x, int y) const
 {
-    // World-space point in meters
-    const b2Vec2 p = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
+	const b2Vec2 p = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
 
-    // Get all shapes attached to this body
-    const int shapeCount = b2Body_GetShapeCount(body);
-    if (shapeCount == 0) return false;
+	const int shapeCount = b2Body_GetShapeCount(body);
+	if (shapeCount == 0) return false;
 
-    std::vector<b2ShapeId> shapes(shapeCount);
-    b2Body_GetShapes(body, shapes.data(), shapeCount);
+	std::vector<b2ShapeId> shapes(shapeCount);
+	b2Body_GetShapes(body, shapes.data(), shapeCount);
 
-    // Test point against each shape
-    for (int i = 0; i < shapeCount; ++i)
-    {
-        if (b2Shape_TestPoint(shapes[i], p))
-            return true;
-    }
-    return false;
+	for (int i = 0; i < shapeCount; ++i)
+	{
+		if (b2Shape_TestPoint(shapes[i], p))
+			return true;
+	}
+	return false;
 }
 
 int PhysBody::RayCast(int x1, int y1, int x2, int y2, float& normal_x, float& normal_y) const
 {
-    const b2Vec2 p1 = { PIXEL_TO_METERS(x1), PIXEL_TO_METERS(y1) };
-    const b2Vec2 p2 = { PIXEL_TO_METERS(x2), PIXEL_TO_METERS(y2) };
-    const b2Vec2 d = { p2.x - p1.x, p2.y - p1.y };
+	const b2Vec2 p1 = { PIXEL_TO_METERS(x1), PIXEL_TO_METERS(y1) };
+	const b2Vec2 p2 = { PIXEL_TO_METERS(x2), PIXEL_TO_METERS(y2) };
+	const b2Vec2 d = { p2.x - p1.x, p2.y - p1.y };
 
-    b2WorldId world = b2Body_GetWorld(body);
-    b2QueryFilter qf = b2DefaultQueryFilter();
+	b2WorldId world = b2Body_GetWorld(body);
+	b2QueryFilter qf = b2DefaultQueryFilter();
 
-    const b2RayResult res = b2World_CastRayClosest(world, p1, d, qf);
-    if (!res.hit) return -1;
+	const b2RayResult res = b2World_CastRayClosest(world, p1, d, qf);
+	if (!res.hit) return -1;
 
-    normal_x = res.normal.x;
-    normal_y = res.normal.y;
+	normal_x = res.normal.x;
+	normal_y = res.normal.y;
 
-    const float fx = float(x2 - x1);
-    const float fy = float(y2 - y1);
-    const float distPixels = sqrtf(fx * fx + fy * fy);
-    return int(floorf(res.fraction * distPixels));
+	const float fx = float(x2 - x1);
+	const float fy = float(y2 - y1);
+	const float distPixels = sqrtf(fx * fx + fy * fy);
+	return int(floorf(res.fraction * distPixels));
 }
-
-//  helpers
 
 b2BodyType Physics::ToB2Type(bodyType t)
 {
-    switch (t)
-    {
-    case DYNAMIC:   return b2_dynamicBody;
-    case STATIC:    return b2_staticBody;
-    case KINEMATIC: return b2_kinematicBody;
-    default:        return b2_staticBody;
-    }
+	switch (t)
+	{
+	case DYNAMIC:   return b2_dynamicBody;
+	case STATIC:    return b2_staticBody;
+	case KINEMATIC: return b2_kinematicBody;
+	default:        return b2_staticBody;
+	}
 }
 
-//  Debug draw callbacks
-
-void Physics::DrawSegmentCb(b2Vec2 p1, b2Vec2 p2, b2HexColor /*color*/, void* /*ctx*/)
+void Physics::DrawSegmentCb(b2Vec2 p1, b2Vec2 p2, b2HexColor , void* )
 {
-    auto& r = *Engine::GetInstance().render.get();
-    r.DrawLine(METERS_TO_PIXELS(p1.x), METERS_TO_PIXELS(p1.y),
-        METERS_TO_PIXELS(p2.x), METERS_TO_PIXELS(p2.y),
-        255, 255, 255);
+	auto& r = *Engine::GetInstance().render.get();
+	r.DrawLine(METERS_TO_PIXELS(p1.x), METERS_TO_PIXELS(p1.y),
+		METERS_TO_PIXELS(p2.x), METERS_TO_PIXELS(p2.y),
+		255, 255, 255);
 }
 
-void Physics::DrawPolygonCb(const b2Vec2* v, int n, b2HexColor /*color*/, void* /*ctx*/)
+void Physics::DrawPolygonCb(const b2Vec2* v, int n, b2HexColor , void* )
 {
-    auto& r = *Engine::GetInstance().render.get();
-    for (int i = 0; i < n; ++i)
-    {
-        const b2Vec2 a = v[i];
-        const b2Vec2 b = v[(i + 1) % n];
-        r.DrawLine(METERS_TO_PIXELS(a.x), METERS_TO_PIXELS(a.y),
-            METERS_TO_PIXELS(b.x), METERS_TO_PIXELS(b.y),
-            255, 255, 100);
-    }
+	auto& r = *Engine::GetInstance().render.get();
+	for (int i = 0; i < n; ++i)
+	{
+		const b2Vec2 a = v[i];
+		const b2Vec2 b = v[(i + 1) % n];
+		r.DrawLine(METERS_TO_PIXELS(a.x), METERS_TO_PIXELS(a.y),
+			METERS_TO_PIXELS(b.x), METERS_TO_PIXELS(b.y),
+			255, 255, 100);
+	}
 }
 
 void Physics::DrawSolidPolygonCb(b2Transform xf, const b2Vec2* v, int n,
-    float /*radius*/, b2HexColor color, void* ctx)
+	float, b2HexColor color, void* ctx)
 {
-    // Transform local verts to world and reuse wireframe draw
-    std::vector<b2Vec2> world(n);
-    for (int i = 0; i < n; ++i) world[i] = b2TransformPoint(xf, v[i]);
-    DrawPolygonCb(world.data(), n, color, ctx);
+	std::vector<b2Vec2> world(n);
+	for (int i = 0; i < n; ++i) world[i] = b2TransformPoint(xf, v[i]);
+	DrawPolygonCb(world.data(), n, color, ctx);
 }
 
-void Physics::DrawCircleCb(b2Vec2 center, float radius, b2HexColor /*color*/, void* /*ctx*/)
+void Physics::DrawCircleCb(b2Vec2 center, float radius, b2HexColor, void*)
 {
-    auto& r = *Engine::GetInstance().render.get();
-    r.DrawCircle(METERS_TO_PIXELS(center.x), METERS_TO_PIXELS(center.y),
-        METERS_TO_PIXELS(radius) * Engine::GetInstance().window.get()->GetScale(),
-        255, 255, 255);
+	auto& r = *Engine::GetInstance().render.get();
+	r.DrawCircle(METERS_TO_PIXELS(center.x), METERS_TO_PIXELS(center.y),
+		METERS_TO_PIXELS(radius) * Engine::GetInstance().window.get()->GetScale(),
+		255, 255, 255);
 }
 
 void Physics::DrawSolidCircleCb(b2Transform xf, float radius, b2HexColor color, void* ctx)
 {
-    // Center is xf.p; outline is fine for now
-    DrawCircleCb(xf.p, radius, color, ctx);
+	DrawCircleCb(xf.p, radius, color, ctx);
 }
 
-// No-op stubs to avoid null calls 
 void Physics::DrawSolidCapsuleStub(b2Vec2, b2Vec2, float, b2HexColor, void*) {}
 void Physics::DrawPointStub(b2Vec2, float, b2HexColor, void*) {}
 void Physics::DrawStringStub(b2Vec2, const char*, b2HexColor, void*) {}

@@ -16,13 +16,11 @@ Input::Input() : Module()
 	mouseMotionX = mouseMotionY = mouseX = mouseY = 0;
 }
 
-// Destructor
 Input::~Input()
 {
 	delete[] keyboard;
 }
 
-// Called before render is available
 bool Input::Awake()
 {
 	LOG("Init SDL input event system");
@@ -37,14 +35,12 @@ bool Input::Awake()
 	return ret;
 }
 
-// Called before the first frame
 bool Input::Start()
 {
 	SDL_StopTextInput(Engine::GetInstance().window->window);
 	return true;
 }
 
-// Called each loop iteration
 bool Input::PreUpdate()
 {
 	static SDL_Event event;
@@ -115,8 +111,6 @@ bool Input::PreUpdate()
 			int scale = Engine::GetInstance().window->GetScale();
 			float renderScale = Engine::GetInstance().window->GetRenderScale();
 
-			// Divide by both the window scale and the render scale
-			// When fullscreen is active, renderScale will be > 1.0
 			float totalScale = scale * renderScale;
 
 			mouseMotionX = (int)(event.motion.xrel / totalScale);
@@ -131,7 +125,6 @@ bool Input::PreUpdate()
 	return true;
 }
 
-// Called before quitting
 bool Input::CleanUp()
 {
 	LOG("Quitting SDL event subsystem");

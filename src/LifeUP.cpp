@@ -28,16 +28,13 @@ bool LifeUP::Start()
     anims.LoadFromTSX("Assets/Textures/LifeUP.tsx", aliases);
     anims.SetCurrent("idle");
 
-    // El tamaño real que queremos para colisión y draw es el del frame (normalmente 32x32)
     SDL_Rect frame = anims.GetCurrentFrame();
     int fw = frame.w;
     int fh = frame.h;
 
-    // En Tiled el objeto te llega como x,y (arriba-izq). Convertimos a centro:
     int cx = (int)position.getX() + fw / 2;
     int cy = (int)position.getY() + fh / 2;
 
-    // Sensor rectangular (NO bloquea) y STATIC (no tiene por qué moverse)
     pbody = Engine::GetInstance().physics->CreateRectangleSensor(cx, cy, fw, fh, bodyType::STATIC);
 
     pbody->listener = shared_from_this();
@@ -77,7 +74,6 @@ bool LifeUP::Update(float dt)
 
 void LifeUP::OnCollision(PhysBody* physA, PhysBody* physB)
 {
-    // La lógica principal se hará en Player::OnCollision (sumar vida).
     if (physB->ctype == ColliderType::PLAYER)
     {
         LOG("LifeUP tocado por el jugador");

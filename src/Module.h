@@ -15,7 +15,6 @@ public:
 		active = true;
 	}
 
-	// Called before render is available
 	virtual bool Awake()
 	{
 		return true;
@@ -27,25 +26,21 @@ public:
 		return true;
 	}
 
-	// Called each loop iteration
 	virtual bool PreUpdate()
 	{
 		return true;
 	}
 
-	// Called each loop iteration
 	virtual bool Update(float dt)
 	{
 		return true;
 	}
 
-	// Called each loop iteration
 	virtual bool PostUpdate()
 	{
 		return true;
 	}
 
-	// Called before quitting
 	virtual bool CleanUp()
 	{
 		return true;

@@ -17,12 +17,10 @@ Render::Render() : Module()
 	background.a = 0;
 }
 
-// Destructor
 Render::~Render()
 {
 }
 
-// Called before render is available
 bool Render::Awake()
 {
 	LOG("Create SDL rendering context");
@@ -61,11 +59,9 @@ bool Render::Awake()
 	return ret;
 }
 
-// Called before the first frame
 bool Render::Start()
 {
 	LOG("render start");
-	// back background
 	if (!SDL_GetRenderViewport(renderer, &viewport))
 	{
 		LOG("SDL_GetRenderViewport failed: %s", SDL_GetError());
@@ -73,7 +69,6 @@ bool Render::Start()
 	return true;
 }
 
-// Called each loop iteration
 bool Render::PreUpdate()
 {
 	SDL_RenderClear(renderer);
@@ -93,7 +88,6 @@ bool Render::PostUpdate()
 	return true;
 }
 
-// Called before quitting
 bool Render::CleanUp()
 {
 	LOG("Destroying SDL render");
@@ -118,14 +112,12 @@ void Render::ResetViewPort()
 
 void Render::HandleInput()
 {
-	// Toggle fullscreen with O key
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_O) == KEY_DOWN)
 	{
 		Engine::GetInstance().window->ToggleFullscreen();
 	}
 }
 
-// Blit to screen
 bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* section, float speed, double angle, int pivotX, int pivotY) const
 {
 	bool ret = true;
@@ -172,7 +164,6 @@ bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* sec
 		p = &pivot;
 	}
 
-	// SDL3: sin flip
 	int rc = SDL_RenderTextureRotated(renderer, texture, src, &rect, angle, p, SDL_FLIP_NONE) ? 0 : -1;
 	if (rc != 0)
 	{
@@ -249,7 +240,6 @@ bool Render::DrawTextureScaled(SDL_Texture* texture, int x, int y, const SDL_Rec
 	SDL_FRect src;
 	SDL_FRect dst;
 
-	// SRC (SDL3 usa FRect). Convertimos desde SDL_Rect si hay section.
 	if (section != nullptr)
 	{
 		src.x = (float)section->x;
@@ -262,7 +252,6 @@ bool Render::DrawTextureScaled(SDL_Texture* texture, int x, int y, const SDL_Rec
 	}
 	else
 	{
-		// Si no hay section, usamos tamaño completo de textura
 		float w = 0, h = 0;
 		SDL_GetTextureSize(texture, &w, &h);
 
@@ -275,7 +264,6 @@ bool Render::DrawTextureScaled(SDL_Texture* texture, int x, int y, const SDL_Rec
 		dst.h = h * scale;
 	}
 
-	// DST (posición + cámara)
 	dst.x = (float)(x + camera.x);
 	dst.y = (float)(y + camera.y);
 
@@ -399,7 +387,6 @@ bool Render::DrawText(const char* text, int x, int y, SDL_Color color, bool useC
 
 	int scale = Engine::GetInstance().window->GetScale();
 
-	// Color del texto (SDL_RenderDebugText usa el color actual del renderer)
 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 	SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
 
@@ -417,7 +404,6 @@ bool Render::DrawText(const char* text, int x, int y, SDL_Color color, bool useC
 		Y = (float)(y * scale);
 	}
 
-	// Texto debug de SDL3 (perfecto para contadores simples)
 	bool ok = SDL_RenderDebugText(renderer, X, Y, text);
 	if (!ok)
 	{
@@ -432,7 +418,6 @@ bool Render::DrawTextureScaled(SDL_Texture* texture, int x, int y, const SDL_Rec
 
 	int scale = Engine::GetInstance().window->GetScale();
 
-	// --- Convert SRC rect to SDL_FRect (SDL3 expects floats) ---
 	SDL_FRect srcF;
 	SDL_FRect* pSrc = nullptr;
 
@@ -451,14 +436,12 @@ bool Render::DrawTextureScaled(SDL_Texture* texture, int x, int y, const SDL_Rec
 	}
 	else
 	{
-		// If no section, we need texture size to build dst w/h
 		float tw = 0.0f, th = 0.0f;
 		SDL_GetTextureSize(texture, &tw, &th);
 		w = (int)tw;
 		h = (int)th;
 	}
 
-	// --- DEST rect in screen coords ---
 	float drawX = 0.0f;
 	float drawY = 0.0f;
 

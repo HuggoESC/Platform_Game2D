@@ -17,7 +17,6 @@ public:
     bool Update(float dt) override;
     bool CleanUp() override;
 
-    // Para poder destruirlo desde Player (como el Item)
     bool Destroy();
 
     void OnCollision(PhysBody* physA, PhysBody* physB) override;
