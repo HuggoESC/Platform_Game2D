@@ -25,6 +25,7 @@ static const char* EntityTypeToString(EntityType t)
 	case EntityType::ITEM:   return "ITEM";
 	case EntityType::ENEMY:  return "ENEMY";
 	case EntityType::LIFEUP: return "LIFEUP";
+	case EntityType::GEM:    return "GEM";
 	default:                 return "UNKNOWN";
 	}
 }
@@ -37,10 +38,10 @@ static EntityType StringToEntityType(const char* s)
 	if (strcmp(s, "ITEM") == 0)   return EntityType::ITEM;
 	if (strcmp(s, "ENEMY") == 0)  return EntityType::ENEMY;
 	if (strcmp(s, "LIFEUP") == 0) return EntityType::LIFEUP;
+	if (strcmp(s, "GEM") == 0)    return EntityType::GEM;
 
 	return EntityType::UNKNOWN;
 }
-
 // Map paths
 static const char* MAP_LEVEL1 = "Level01.tmx";
 static const char* MAP_LEVEL2 = "Level02.tmx";
@@ -541,6 +542,16 @@ bool Scene::SaveGameToSlot(int slot)
 		n.append_attribute("type") = EntityTypeToString(e->type);
 		n.append_attribute("x") = e->position.getX();
 		n.append_attribute("y") = e->position.getY();
+
+		if (e->type == EntityType::ENEMY)
+		{
+			auto en = std::dynamic_pointer_cast<Enemy>(e);
+			if (en)
+			{
+				n.append_attribute("boss") = en->IsBoss() ? 1 : 0;
+			}
+		}
+
 	}
 
 	bool ok = file.save_file(path.c_str());
@@ -598,7 +609,6 @@ bool Scene::LoadGameFromSlot(int slot)
 	if (player->hp < 0) player->hp = 0;
 	if (player->hp > player->maxHp) player->hp = player->maxHp;
 
-	// Cargar checkpoint (si existe)
 	if (p.attribute("spawn_x") && p.attribute("spawn_y"))
 	{
 		player->spawnPosition = Vector2D(
@@ -608,11 +618,9 @@ bool Scene::LoadGameFromSlot(int slot)
 	}
 	else
 	{
-		// compatibilidad: si no existía en saves antiguos
 		player->spawnPosition = player->position;
 	}
 
-	// Cargar cámara
 
 	auto cam = root.child("camera");
 	if (cam)
@@ -621,13 +629,12 @@ bool Scene::LoadGameFromSlot(int slot)
 		Engine::GetInstance().render->camera.y = cam.attribute("y").as_int();
 	}
 
-	// 2) Borrar entidades actuales correctamente (evita colliders fantasma)
 	auto& list = Engine::GetInstance().entityManager->entities;
 	for (auto it = list.begin(); it != list.end(); )
 	{
 		if (*it &&
 			(*it)->type != EntityType::PLAYER &&
-			(*it)->type != EntityType::HOGUERA)   // <-- NO BORRAR HOGUERA
+			(*it)->type != EntityType::HOGUERA)   
 		{
 			(*it)->CleanUp();
 			it = list.erase(it);
@@ -638,7 +645,6 @@ bool Scene::LoadGameFromSlot(int slot)
 		}
 	}
 
-	// 3) Recrear entidades guardadas, y LLAMAR Start()
 	for (auto e : root.child("entities").children("entity"))
 	{
 		EntityType t = StringToEntityType(e.attribute("type").as_string());
@@ -648,17 +654,24 @@ bool Scene::LoadGameFromSlot(int slot)
 		auto ent = Engine::GetInstance().entityManager->CreateEntity(t);
 		if (ent)
 		{
-			// Para la mayoría: position + Start
 			ent->position = Vector2D(x, y);
-			ent->Start();
 
-			// PERO Enemy necesita SetPosition porque su pbody se crea en el constructor
 			if (t == EntityType::ENEMY)
 			{
-				auto slime = std::dynamic_pointer_cast<Enemy>(ent);
-				if (slime)
-					slime->SetPosition((int)x, (int)y);
+				auto en = std::dynamic_pointer_cast<Enemy>(ent);
+				if (en)
+				{
+					bool isBoss = e.attribute("boss").as_int(0) == 1;
+					if (isBoss)
+					{
+						en->MakeBoss(); 
+					}
+
+					en->SetPosition((int)x, (int)y);
+				}
 			}
+
+			ent->Start();
 		}
 	}
 

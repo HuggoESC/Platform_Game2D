@@ -1,30 +1,27 @@
 <?xml version="1.0"?>
 <save>
-	<player x="697" y="496" hp="5" maxHp="5" spawn_x="80" spawn_y="657" />
-	<camera x="-377" y="-48" />
+	<player x="700" y="496" hp="5" maxHp="5" spawn_x="80" spawn_y="657" />
+	<camera x="-380" y="-48" />
 	<entities>
 		<entity type="UNKNOWN" x="0" y="0" />
-		<entity type="ENEMY" x="1426" y="690" />
-		<entity type="ENEMY" x="1811" y="114" />
-		<entity type="ENEMY" x="691" y="690" />
-		<entity type="ENEMY" x="114" y="146" />
+		<entity type="ENEMY" x="1331" y="690" boss="0" />
+		<entity type="ENEMY" x="1811" y="114" boss="0" />
+		<entity type="ENEMY" x="613" y="690" boss="0" />
+		<entity type="ENEMY" x="88" y="146" boss="0" />
 		<entity type="LIFEUP" x="1406" y="384" />
 		<entity type="LIFEUP" x="961" y="64" />
-		<entity type="UNKNOWN" x="194" y="610" />
-		<entity type="UNKNOWN" x="258" y="576" />
-		<entity type="UNKNOWN" x="352" y="543" />
-		<entity type="UNKNOWN" x="512" y="64" />
-		<entity type="UNKNOWN" x="688" y="288" />
-		<entity type="UNKNOWN" x="722" y="63" />
-		<entity type="UNKNOWN" x="1186" y="288" />
-		<entity type="UNKNOWN" x="1517" y="95" />
-		<entity type="UNKNOWN" x="1696" y="574" />
+		<entity type="GEM" x="512" y="64" />
+		<entity type="GEM" x="688" y="288" />
+		<entity type="GEM" x="722" y="63" />
+		<entity type="GEM" x="977" y="674" />
+		<entity type="GEM" x="1186" y="288" />
+		<entity type="GEM" x="1517" y="95" />
+		<entity type="GEM" x="1696" y="574" />
 		<entity type="LIFEUP" x="1844" y="664" />
 		<entity type="LIFEUP" x="34" y="108" />
-		<entity type="UNKNOWN" x="450" y="256" />
-		<entity type="UNKNOWN" x="353" y="192" />
-		<entity type="UNKNOWN" x="228" y="130" />
-		<entity type="ENEMY" x="1536" y="648" />
-		<entity type="ITEM" x="431" y="496" />
+		<entity type="GEM" x="450" y="256" />
+		<entity type="GEM" x="353" y="192" />
+		<entity type="GEM" x="228" y="130" />
+		<entity type="ENEMY" x="1504" y="648" boss="1" />
 	</entities>
 </save>

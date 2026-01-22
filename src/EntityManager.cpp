@@ -4,6 +4,7 @@
 #include "Textures.h"
 #include "Scene.h"
 #include "Log.h"
+#include "Gem.h"
 #include "Item.h"
 #include "Enemy.h"
 #include "hoguera.h"
@@ -83,6 +84,9 @@ std::shared_ptr<Entity> EntityManager::CreateEntity(EntityType type)
 		break;
 	case EntityType::HOGUERA:
 		entity = std::make_shared<hoguera>(0, 0);
+		break;
+	case EntityType::GEM:
+		entity = std::make_shared<Gem>(0, 0);
 		break;
 	case EntityType::LIFEUP: 
 	{
