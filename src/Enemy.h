@@ -133,4 +133,9 @@ private:
 	float flySpeed = 80.0f;     // velocidad horizontal/diagonal
 	float flyAggroRange = 260.0f;
 
+	// Flying enemy collision slowdown
+	bool isSlowedDown = false;
+	float slowdownTimer = 0.0f;
+	const float slowdownDuration = 1.0f; 
+	const float slowdownMultiplier = 0.3f; 
 };
