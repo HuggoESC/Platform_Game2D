@@ -143,6 +143,7 @@ This structure ensures scalability, clarity, and separation of responsibilities.
 - **F5** → Save game
 - **F6** → Load game
 - **F10** → God Mode
+- **F9** → Collisions
 - **T** → Debug teleport
 
 ---
