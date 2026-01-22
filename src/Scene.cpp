@@ -111,6 +111,7 @@ bool Scene::PreUpdate()
 	return true;
 }
 
+
 // Called each loop iteration
 bool Scene::Update(float dt)
 {
@@ -118,6 +119,20 @@ bool Scene::Update(float dt)
 	float camSpeed = 1;
 
 	bool levelWantsBlock = false;
+
+	if (pendingLevelChange)
+	{
+		pendingLevelChange = false;
+
+		// Setear spawn antes de LoadLevel (LoadLevel usa player->spawnPosition)
+		if (player)
+			player->spawnPosition = pendingSpawn;
+
+		// evita eventos raros al teletransportar y recrear cosas
+		Engine::GetInstance().physics->ignoreContactSteps = 2;
+
+		LoadLevel(pendingNextLevel);
+	}
 
 	// PAUSA con ESC (oficial)
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_ESCAPE) == KEY_DOWN)
@@ -719,6 +734,13 @@ void Scene::LoadLevel(int level)
 	gameState = GameState::PLAYING;
 
 	Engine::GetInstance().physics->isLoading = false;
+}
+
+void Scene::RequestLevelChange(int level, const Vector2D& spawnPos)
+{
+	pendingLevelChange = true;
+	pendingNextLevel = level;
+	pendingSpawn = spawnPos;
 }
 
 void Scene::RequestSave(int slot)

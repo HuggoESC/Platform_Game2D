@@ -8,7 +8,7 @@
 #include "Enemy.h"
 #include "hoguera.h"
 #include "LifeUP.h"
-
+#include "MapChangeTrigger.h"
 #include <math.h>
 #include <algorithm>
 
@@ -189,6 +189,23 @@ bool Map::Load(std::string path, std::string fileName)
 			std::string imgName = tilesetNode.child("image").attribute("source").as_string();
             tileSet->texture = Engine::GetInstance().textures->Load((mapPath+imgName).c_str());
 
+            // Si Tiled no nos da 'columns' (por ejemplo si el tileset es TSX externo),
+// lo calculamos desde el tamaño de la textura.
+            if (tileSet->columns <= 0)
+            {
+                float tw = 0, th = 0;
+                if (tileSet->texture && SDL_GetTextureSize(tileSet->texture, &tw, &th))
+                {
+                    // ancho útil (descontando márgenes si los usas)
+                    int usableW = (int)tw - (tileSet->margin * 2);
+                    int step = tileSet->tileWidth + tileSet->spacing;
+                    if (step > 0) tileSet->columns = usableW / step;
+                }
+
+                // Fallback final defensivo
+                if (tileSet->columns <= 0) tileSet->columns = 1;
+            }
+
 			mapData.tilesets.push_back(tileSet);
 		}
 
@@ -287,47 +304,71 @@ bool Map::Load(std::string path, std::string fileName)
         {
             std::string layerName = objGroup.attribute("name").as_string();
 
-            if (layerName == "Entities")   // nombre de la capa de objetos en Tiled
+            // ---------- ENTITIES ----------
+            if (layerName == "Entities")
             {
                 for (pugi::xml_node object = objGroup.child("object");
                     object;
                     object = object.next_sibling("object"))
                 {
-                    std::string type = object.attribute("type").as_string();
-                    std::string name = object.attribute("name").as_string(); 
-                    float x = object.attribute("x").as_float();
-                    float y = object.attribute("y").as_float();
+                    std::string name = object.attribute("name").as_string();
+                    int x = object.attribute("x").as_int();
+                    int y = object.attribute("y").as_int();
 
-                    if (name == "Slime")  
+                    if (name == "Slime")
                     {
                         auto e = Engine::GetInstance().entityManager->CreateEntity(EntityType::ENEMY);
-                        if (e)
-                        {
-                            std::shared_ptr<Enemy> slime = std::dynamic_pointer_cast<Enemy>(e);
-                            if (slime)
-                            {
-                                slime->SetPosition((int)x, (int)y);
-                            }
-                        }
+                        auto slime = std::dynamic_pointer_cast<Enemy>(e);
+                        if (slime) slime->SetPosition(x, y);
                     }
                     else if (name == "hoguera")
                     {
-                        auto h = std::make_shared<hoguera>((int)x, (int)y);
+                        auto h = std::make_shared<hoguera>(x, y);
                         Engine::GetInstance().entityManager->AddEntity(h);
-
-                        // MUY IMPORTANTE: al crearse durante Map::Load(), hay que inicializarla manualmente
                         h->Awake();
                         h->Start();
                     }
                     else if (name == "LifeUP")
                     {
-                        auto life = std::make_shared<LifeUP>((int)x, (int)y);
+                        auto life = std::make_shared<LifeUP>(x, y);
                         Engine::GetInstance().entityManager->AddEntity(life);
-
-                        // MUY IMPORTANTE: igual que arriba
                         life->Awake();
                         life->Start();
                     }
+                }
+            }
+
+            // ---------- MAP CHANGE ----------
+            else if (layerName == "MapChange")
+            {
+                for (pugi::xml_node obj = objGroup.child("object");
+                    obj;
+                    obj = obj.next_sibling("object"))
+                {
+                    int ox = obj.attribute("x").as_int();
+                    int oy = obj.attribute("y").as_int();
+                    int ow = obj.attribute("width").as_int();
+                    int oh = obj.attribute("height").as_int();
+
+                    int targetLevel = 2;
+                    int spawnX = 96;
+                    int spawnY = 650;
+
+                    pugi::xml_node props = obj.child("properties");
+                    for (pugi::xml_node p = props.child("property"); p; p = p.next_sibling("property"))
+                    {
+                        std::string pname = p.attribute("name").as_string();
+                        std::string pvalue = p.attribute("value").as_string();
+
+                        if (pname == "targetLevel") targetLevel = atoi(pvalue.c_str());
+                        else if (pname == "spawnX") spawnX = atoi(pvalue.c_str());
+                        else if (pname == "spawnY") spawnY = atoi(pvalue.c_str());
+                    }
+
+                    auto trigger = std::make_shared<MapChangeTrigger>(ox, oy, ow, oh, targetLevel, spawnX, spawnY);
+                    Engine::GetInstance().entityManager->AddEntity(trigger);
+                    trigger->Awake();
+                    trigger->Start();
                 }
             }
         }

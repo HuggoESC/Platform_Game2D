@@ -75,6 +75,7 @@ public:
 	void RequestLoad(int slot);
 
 	void RestartLevel();
+	void RequestLevelChange(int level, const Vector2D& spawnPos);
 
 	SaveMode saveMode = SaveMode::NONE;
 
@@ -130,5 +131,9 @@ private:
 
 	bool gameOverActive = false;
 	float gameOverTimer = 0.0f;
+
+	bool pendingLevelChange = false;
+	int pendingNextLevel = 1;
+	Vector2D pendingSpawn = Vector2D(96, 650);
 
 };

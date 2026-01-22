@@ -21,6 +21,7 @@ public:
 
 	Entity() {}
 	Entity(EntityType type) : type(type), active(true) {}
+	virtual ~Entity() = default;
 
 	virtual bool Awake()
 	{

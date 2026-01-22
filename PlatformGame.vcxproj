@@ -156,6 +156,7 @@
     <ClCompile Include="src\LifeUP.cpp" />
     <ClCompile Include="src\Log.cpp" />
     <ClCompile Include="src\Map.cpp" />
+    <ClCompile Include="src\MapChangeTrigger.cpp" />
     <ClCompile Include="src\PerfTimer.cpp" />
     <ClCompile Include="src\Physics.cpp" />
     <ClCompile Include="src\PlatformGame.cpp" />
@@ -180,6 +181,7 @@
     <ClInclude Include="src\LifeUP.h" />
     <ClInclude Include="src\Log.h" />
     <ClInclude Include="src\Map.h" />
+    <ClInclude Include="src\MapChangeTrigger.h" />
     <ClInclude Include="src\Module.h" />
     <ClInclude Include="src\PerfTimer.h" />
     <ClInclude Include="src\Physics.h" />
