@@ -23,7 +23,6 @@ enum class GameState
 	TITLE
 };
 
-// --- GameOver menu ---
 enum class GameOverOption { RETRY, BACK_TO_TITLE };
 
 class Scene : public Module
@@ -32,35 +31,25 @@ public:
 
 	Scene();
 
-	// Destructor
 	virtual ~Scene();
 
-	// Called before render is available
 	bool Awake();
 
-	// Called before the first frame
 	bool Start();
 
-	// Called before all Updates
 	bool PreUpdate();
 
-	// Called each loop iteration
 	bool Update(float dt);
 
-	// Called before all Updates
 	bool PostUpdate();
 
-	// Called before quitting
 	bool CleanUp();
 
-	// Save and Load
 	bool SaveGame();
 	bool LoadGame();
 
-	// Pausar el juego
 	bool IsPaused() const { return gameState == GameState::PAUSED || gameState == GameState::TITLE; }
 
-	// Save and Load from a specific slot
 	bool SaveGameToSlot(int slot);
 	bool LoadGameFromSlot(int slot);
 	
@@ -81,18 +70,15 @@ public:
 
 private:
 
-	// Declare a Player attribute
 	std::shared_ptr<Player> player;
 
 	GameState gameState = GameState::PLAYING;
 
-	// --- GameOver menu ---
 	GameOverOption gameOverOption = GameOverOption::RETRY;
 	SDL_Texture* gameOverTexture = nullptr;
 
 	SDL_Texture* pauseTexture = nullptr;
 
-	// --- Level selector ---
 	enum class LevelSelOption { LEVEL1, LEVEL2, BACK };
 	LevelSelOption levelSelOption = LevelSelOption::LEVEL1;
 
@@ -100,25 +86,21 @@ private:
 
 	bool levelSelectorInputLock = false;
 
-	// Nivel actual
 	int currentLevel = 1;
 
-	// Helpers
 	void LoadLevel(int level);
 
-	// --- Pause menu ---
 	enum class PauseOption { RESUME, SETTINGS, BACK_TO_TITLE, EXIT };
 	PauseOption pauseOption = PauseOption::RESUME;
 
-	// --- Intro menu ---
 	enum class IntroOption { START, EXIT };
 	IntroOption introOption = IntroOption::START;
 
 	SDL_Texture* introTexture = nullptr;
 	bool exitRequested = false;
-	bool showSettingsFromPause = false; // placeholder de momento
+	bool showSettingsFromPause = false; 
 
-	bool pauseMusicPlaying = false;	// para pausar/reanudar música al pausar
+	bool pauseMusicPlaying = false;	
 
 	bool pendingSave = false;
 	bool pendingLoad = false;

@@ -11,7 +11,6 @@ MapChangeTrigger::MapChangeTrigger(int x_, int y_, int w_, int h_, int targetLev
 
 bool MapChangeTrigger::Start()
 {
-    // Ojo: en TMX x,y suele venir como top-left. Convertimos a centro:
     int cx = x + w / 2;
     int cy = y + h / 2;
 
@@ -31,12 +30,10 @@ void MapChangeTrigger::OnCollision(PhysBody* physA, PhysBody* physB)
     {
         used = true;
 
-        // Desarmar para que no dispare otra vez este frame
         if (pbody) pbody->listener.reset();
 
         LOG("MapChangeTrigger -> request level %d", targetLevel);
 
-        // IMPORTANTÍSIMO: pedir cambio, NO cargar nivel directamente desde callback
         Engine::GetInstance().scene->RequestLevelChange(targetLevel, targetSpawn);
     }
 }

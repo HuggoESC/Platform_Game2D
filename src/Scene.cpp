@@ -15,7 +15,7 @@
 #include "Enemy.h"
 #include "LifeUP.h"
 
-#include <cstring> // strcmp
+#include <cstring> 
 
 static const char* EntityTypeToString(EntityType t)
 {
@@ -25,7 +25,6 @@ static const char* EntityTypeToString(EntityType t)
 	case EntityType::ITEM:   return "ITEM";
 	case EntityType::ENEMY:  return "ENEMY";
 	case EntityType::LIFEUP: return "LIFEUP";
-	case EntityType::GEM:    return "GEM";
 	default:                 return "UNKNOWN";
 	}
 }
@@ -38,15 +37,13 @@ static EntityType StringToEntityType(const char* s)
 	if (strcmp(s, "ITEM") == 0)   return EntityType::ITEM;
 	if (strcmp(s, "ENEMY") == 0)  return EntityType::ENEMY;
 	if (strcmp(s, "LIFEUP") == 0) return EntityType::LIFEUP;
-	if (strcmp(s, "GEM") == 0)    return EntityType::GEM;
 
 	return EntityType::UNKNOWN;
 }
-// Map paths
+
 static const char* MAP_LEVEL1 = "Level01.tmx";
 static const char* MAP_LEVEL2 = "Level02.tmx";
 
-// Music paths
 static const char* MUSIC_LEVEL1 = "Assets/Audio/Music/level-iv-339695.wav";
 static const char* MUSIC_PAUSE = "Assets/Audio/Music/PauseTheme.wav";
 static const char* MUSIC_GAMEOVER = "Assets/Audio/Music/GameOver.wav";
@@ -58,17 +55,14 @@ Scene::Scene() : Module()
 	name = "scene";
 }
 
-// Destructor
 Scene::~Scene()
 {}
 
-// Called before render is available
 bool Scene::Awake()
 {
 	LOG("Loading Scene");
 	bool ret = true;
 
-	// Instantiate the player using the entity manager
 	player = std::dynamic_pointer_cast<Player>(
 		Engine::GetInstance().entityManager->CreateEntity(EntityType::PLAYER)
 	);
@@ -76,7 +70,6 @@ bool Scene::Awake()
 	return ret;
 }
 
-// Called before the first frame
 bool Scene::Start()
 {
 	Engine::GetInstance().map->Load("Assets/Maps/", "Level01.tmx");
@@ -106,17 +99,14 @@ bool Scene::Start()
 	return true;
 }
 
-// Called each loop iteration
 bool Scene::PreUpdate()
 {
 	return true;
 }
 
 
-// Called each loop iteration
 bool Scene::Update(float dt)
 {
-	// Make the camera movement independent of framerate
 	float camSpeed = 1;
 
 	bool levelWantsBlock = false;
@@ -135,7 +125,6 @@ bool Scene::Update(float dt)
 		LoadLevel(pendingNextLevel);
 	}
 
-	// PAUSA con ESC (oficial)
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_ESCAPE) == KEY_DOWN)
 	{
 		if (gameState == GameState::PLAYING)
@@ -152,14 +141,12 @@ bool Scene::Update(float dt)
 		}
 	}
 
-	// P como toggle de pausa SOLO para debug (opcional)
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_P) == KEY_DOWN)
 	{
 		LOG("DEBUG: Toggle pause con P");
 		gameState = (gameState == GameState::PAUSED) ? GameState::PLAYING : GameState::PAUSED;
 	}
 
-	// --- AUDIO por cambio de estado (solo cuando cambia) ---
 	if (gameState != lastState)
 	{
 		if (gameState == GameState::INTRO)
@@ -176,7 +163,6 @@ bool Scene::Update(float dt)
 		}
 		else if (gameState == GameState::LEVELSELECTOR)
 		{
-			// De momento: usa música del nivel (o crea MUSIC_MENU si quieres)
 			Engine::GetInstance().audio->PlayMusic(MUSIC_INTRO);
 		}
 		else if (gameState == GameState::PLAYING)
@@ -187,7 +173,6 @@ bool Scene::Update(float dt)
 		lastState = gameState;
 	}
 
-	// --- Estado INTRO (con botones START/EXIT) ---
 	bool introWantsBlock = false;
 	if (gameState == GameState::INTRO)
 	{
@@ -197,13 +182,12 @@ bool Scene::Update(float dt)
 		int winW = 0, winH = 0;
 		Engine::GetInstance().window->GetWindowSize(winW, winH);
 
-		// Botones centrados (ajústalo si quieres un pelín más arriba/abajo)
 		const int btnW = 360;
 		const int btnH = 75;
 		const int gap = 18;
 
 		int startX = (winW - btnW) / 2;
-		int startY_Start = (winH / 2) + 140; // START más arriba
+		int startY_Start = (winH / 2) + 140; 
 		int startY_Exit = (winH / 2) + 160 + btnH + gap;
 
 		SDL_Rect startRect = { startX, startY_Start, btnW, btnH };
@@ -213,14 +197,12 @@ bool Scene::Update(float dt)
 			return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
 			};
 
-		// Teclado: alterna entre START y EXIT
 		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_UP) == KEY_DOWN ||
 			Engine::GetInstance().input->GetKey(SDL_SCANCODE_DOWN) == KEY_DOWN)
 		{
 			introOption = (introOption == IntroOption::START) ? IntroOption::EXIT : IntroOption::START;
 		}
 
-		// Mouse hover
 		if (inside(startRect)) introOption = IntroOption::START;
 		if (inside(exitRect))  introOption = IntroOption::EXIT;
 
@@ -232,21 +214,18 @@ bool Scene::Update(float dt)
 		{
 			if (introOption == IntroOption::START)
 			{
-				// Lo mismo que "Enter": avanzar
-				gameState = GameState::LEVELSELECTOR;  // o PLAYING si aún no tienes selector
-				levelSelectorInputLock = true; // para evitar activar opción al entrar
+				gameState = GameState::LEVELSELECTOR;  
+				levelSelectorInputLock = true; 
 			}
-			else // EXIT
+			else 
 			{
 				exitRequested = true;
 			}
 		}
 
-		// Marcamos que debemos bloquear gameplay este frame
 		introWantsBlock = true;
 	}
 
-	// --- Estado LEVELSELECTOR ---
 	if (gameState == GameState::LEVELSELECTOR)
 	{
 		int mx, my;
@@ -255,7 +234,6 @@ bool Scene::Update(float dt)
 		int winW = 0, winH = 0;
 		Engine::GetInstance().window->GetWindowSize(winW, winH);
 
-		// Rectángulos de los botones (ajustables)
 		const int y = (winH / 2) - 35;
 		const int box = 96;
 		const int gap = 28;
@@ -263,7 +241,6 @@ bool Scene::Update(float dt)
 
 		int totalW = box + gap + box + gap + backW;
 
-		// Este +260 es para moverlo a la derecha porque el panel tiene texto a la izquierda.
 		int startX = (winW - totalW) / 2 + 260;
 
 		SDL_Rect level1Rect = { startX, y, box, box };
@@ -274,7 +251,6 @@ bool Scene::Update(float dt)
 			return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
 			};
 
-		// Teclado: LEFT / RIGHT mueve selección
 		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_LEFT) == KEY_DOWN)
 		{
 			int idx = (int)levelSelOption;
@@ -288,12 +264,10 @@ bool Scene::Update(float dt)
 			levelSelOption = (LevelSelOption)idx;
 		}
 
-		// Mouse hover: si pasas por encima, selecciona
 		if (inside(level1Rect)) levelSelOption = LevelSelOption::LEVEL1;
 		if (inside(level2Rect)) levelSelOption = LevelSelOption::LEVEL2;
 		if (inside(backRect))   levelSelOption = LevelSelOption::BACK;
 
-		// Bloqueo de input al entrar (evita que el Enter de la intro active también el selector)
 		if (levelSelectorInputLock)
 		{
 			if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_RETURN) == KEY_IDLE)
@@ -327,13 +301,11 @@ bool Scene::Update(float dt)
 			}
 		}
 
-		levelWantsBlock = true; // bloquea gameplay
+		levelWantsBlock = true; 
 	}
 
-	// --- Estado GAMEOVER: menú con selectores ---
 	if (gameState == GameState::GAMEOVER)
 	{
-		// Navegación teclado
 		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_UP) == KEY_DOWN ||
 			Engine::GetInstance().input->GetKey(SDL_SCANCODE_DOWN) == KEY_DOWN)
 		{
@@ -342,7 +314,6 @@ bool Scene::Update(float dt)
 				: GameOverOption::RETRY;
 		}
 
-		// Mouse hover/click
 		int mx, my;
 		Engine::GetInstance().input->GetMousePosition(mx, my);
 
@@ -377,19 +348,18 @@ bool Scene::Update(float dt)
 				gameOverActive = false;
 				LoadLevel(1);
 			}
-			else // BACK_TO_INTRO
+			else 
 			{
 				gameOverActive = false;
 
-				// Ir a la Intro real
+				
 				gameState = GameState::INTRO;
 
-				// (Opcional pero recomendable) dejar el selector en START por defecto
 				introOption = IntroOption::START;
 			}
 		}
 
-		return true; // bloquear gameplay en GAMEOVER
+		return true;
 	}
 
 
@@ -408,14 +378,12 @@ bool Scene::Update(float dt)
 			pauseOption = (PauseOption)idx;
 		}
 
-		// Mouse: hover/click en botones (rectángulos)
 		int mx, my;
 		Engine::GetInstance().input->GetMousePosition(mx, my);
 
 		int winW = 0, winH = 0;
 		Engine::GetInstance().window->GetWindowSize(winW, winH);
 
-		// Layout centrado
 		const int btnW = 320;
 		const int btnH = 55;
 		const int gap = 14;
@@ -428,7 +396,6 @@ bool Scene::Update(float dt)
 		{
 			buttons[i] = { startX, startY + i * (btnH + gap), btnW, btnH };
 
-			// Hover -> selecciona
 			if (mx >= buttons[i].x && mx <= buttons[i].x + buttons[i].w &&
 				my >= buttons[i].y && my <= buttons[i].y + buttons[i].h)
 			{
@@ -504,7 +471,6 @@ bool Scene::Update(float dt)
 
 bool Scene::SaveGameToSlot(int slot)
 {
-	// Asegura que existe la carpeta Saves
 	_mkdir("saves");
 
 	std::string path = "Saves/slot" + std::to_string(slot) + ".xml";
@@ -513,7 +479,6 @@ bool Scene::SaveGameToSlot(int slot)
 	pugi::xml_document file;
 	pugi::xml_node root = file.append_child("save");
 
-	// Guardar jugador
 	pugi::xml_node p = root.append_child("player");
 	p.append_attribute("x") = player->position.getX();
 	p.append_attribute("y") = player->position.getY();
@@ -524,12 +489,10 @@ bool Scene::SaveGameToSlot(int slot)
 	p.append_attribute("spawn_x") = player->spawnPosition.getX();
 	p.append_attribute("spawn_y") = player->spawnPosition.getY();
 
-	// Guardar cámara
 	pugi::xml_node cam = root.append_child("camera");
 	cam.append_attribute("x") = Engine::GetInstance().render->camera.x;
 	cam.append_attribute("y") = Engine::GetInstance().render->camera.y;
 
-	// Guardar entidades (NO guardes al player aquí)
 	pugi::xml_node ents = root.append_child("entities");
 
 	for (auto& e : Engine::GetInstance().entityManager->entities)
@@ -542,16 +505,6 @@ bool Scene::SaveGameToSlot(int slot)
 		n.append_attribute("type") = EntityTypeToString(e->type);
 		n.append_attribute("x") = e->position.getX();
 		n.append_attribute("y") = e->position.getY();
-
-		if (e->type == EntityType::ENEMY)
-		{
-			auto en = std::dynamic_pointer_cast<Enemy>(e);
-			if (en)
-			{
-				n.append_attribute("boss") = en->IsBoss() ? 1 : 0;
-			}
-		}
-
 	}
 
 	bool ok = file.save_file(path.c_str());
@@ -583,7 +536,6 @@ bool Scene::LoadGameFromSlot(int slot)
 
 	pugi::xml_node root = file.child("save");
 
-	// 1) Cargar jugador (posición + mover cuerpo físico)
 	auto p = root.child("player");
 	float px = p.attribute("x").as_float();
 	float py = p.attribute("y").as_float();
@@ -602,7 +554,6 @@ bool Scene::LoadGameFromSlot(int slot)
 	else
 		player->maxHp = 4;
 
-	// Clamp de seguridad
 	if (player->maxHp < 4) player->maxHp = 4;
 	if (player->maxHp > Player::MAX_HP) player->maxHp = Player::MAX_HP;
 
@@ -620,7 +571,6 @@ bool Scene::LoadGameFromSlot(int slot)
 	{
 		player->spawnPosition = player->position;
 	}
-
 
 	auto cam = root.child("camera");
 	if (cam)
@@ -655,27 +605,17 @@ bool Scene::LoadGameFromSlot(int slot)
 		if (ent)
 		{
 			ent->position = Vector2D(x, y);
+			ent->Start();
 
 			if (t == EntityType::ENEMY)
 			{
-				auto en = std::dynamic_pointer_cast<Enemy>(ent);
-				if (en)
-				{
-					bool isBoss = e.attribute("boss").as_int(0) == 1;
-					if (isBoss)
-					{
-						en->MakeBoss(); 
-					}
-
-					en->SetPosition((int)x, (int)y);
-				}
+				auto slime = std::dynamic_pointer_cast<Enemy>(ent);
+				if (slime)
+					slime->SetPosition((int)x, (int)y);
 			}
-
-			ent->Start();
 		}
 	}
 
-	// Mostrar notificación en pantalla
 	ShowLoadNotification(slot);
 
 	Engine::GetInstance().physics->isLoading = false;
@@ -689,9 +629,8 @@ void Scene::LoadLevel(int level)
 	currentLevel = level;
 
 	Engine::GetInstance().physics->isLoading = true;
-	Engine::GetInstance().physics->ignoreContactSteps = 2; // 2 frames sin contactos
+	Engine::GetInstance().physics->ignoreContactSteps = 2;
 
-	// 1) Limpiar entidades excepto PLAYER
 	auto& list = Engine::GetInstance().entityManager->entities;
 	for (auto it = list.begin(); it != list.end(); )
 	{
@@ -706,38 +645,31 @@ void Scene::LoadLevel(int level)
 		}
 	}
 
-	// 2) Cargar mapa según nivel
 	const char* mapFile = (level == 2) ? MAP_LEVEL2 : MAP_LEVEL1;
 	Engine::GetInstance().map->Load("Assets/Maps/", mapFile);
 
-	// Si entramos desde menú (o carga normal), usamos el spawn del TMX
 	if (!comingFromLevelTransition && Engine::GetInstance().map->HasPlayerSpawn())
 	{
 		player->spawnPosition = Engine::GetInstance().map->GetPlayerSpawn();
 	}
 
-	// Consumimos el flag
 	comingFromLevelTransition = false;
 
-	// --- SPAWN DEBUG: enemigo volador fijo ---
 	auto e = Engine::GetInstance().entityManager->CreateEntity(EntityType::ENEMY);
 	auto en = std::dynamic_pointer_cast<Enemy>(e);
 
 	if (en)
 	{
-		// Spawn boss at position (1480, 650)
 		int spawnX = 1480;
 		int spawnY = 650;
 
 		en->SetPosition(spawnX, spawnY);
 
-		// Convert to boss type
 		en->MakeBoss();
 
 		LOG("Spawned Boss (Cthulhu) at %d, %d", spawnX, spawnY);
 	}
 
-	// --- Spawn dagger at Level 1 ---
 	if (level == 1)
 	{
 		auto dagger = Engine::GetInstance().entityManager->CreateEntity(EntityType::ITEM);
@@ -751,14 +683,12 @@ void Scene::LoadLevel(int level)
 			LOG("Spawned Dagger at 416, 450");
 		}
 	}
-	// --- Automatically have dagger at Level 2 ---
 	else if (level == 2)
 	{
 		player->canAttack = true;
 		LOG("Level 2: Player starts with dagger ability enabled");
 	}
 
-	// 3) Reset jugador a spawn
 	Vector2D spawn = player->spawnPosition;
 	if (spawn.getX() == 0 && spawn.getY() == 0)
 		spawn = player->position;
@@ -769,7 +699,6 @@ void Scene::LoadLevel(int level)
 
 	player->hp = player->maxHp;
 
-	// 4) Colocar cámara para que el jugador sea visible
 	SDL_Rect& cam = Engine::GetInstance().render->camera;
 
 	Vector2D mapPx = Engine::GetInstance().map->GetMapSizeInPixels();
@@ -777,7 +706,6 @@ void Scene::LoadLevel(int level)
 	int targetCamX = (int)(-player->position.getX() + cam.w / 2);
 	int targetCamY = (int)(-player->position.getY() + cam.h / 2);
 
-	// Clamp para que no se salga del mapa
 	int minCamX = (int)(-(mapPx.getX() - cam.w));
 	int minCamY = (int)(-(mapPx.getY() - cam.h));
 
@@ -792,7 +720,6 @@ void Scene::LoadLevel(int level)
 	cam.x = targetCamX;
 	cam.y = targetCamY;
 
-	// 5) Estado jugando
 	gameState = GameState::PLAYING;
 
 	Engine::GetInstance().physics->isLoading = false;
@@ -819,17 +746,13 @@ void Scene::RequestLoad(int slot)
 
 void Scene::SetCheckpoint(const Vector2D& pos)
 {
-	// Seguridad por si algo llama antes de tener player listo
 	if (!player) return;
 
 	player->spawnPosition = pos;
 	LOG("Checkpoint actualizado: %.1f %.1f", pos.getX(), pos.getY());
 
-	// Evitar autosave en mitad de una carga
 	if (Engine::GetInstance().physics->isLoading) return;
 
-	// Evitar spam de guardados si el sensor dispara varias veces
-	// (por ejemplo, varias fixtures/contactos en el mismo frame)
 	if (!pendingSave)
 	{
 		RequestSave(1);
@@ -839,7 +762,7 @@ void Scene::SetCheckpoint(const Vector2D& pos)
 void Scene::ShowLoadNotification(int slot)
 {
 	loadNotificationSlot = slot;
-	loadNotificationTimer = 2.0f; // 2 segundos
+	loadNotificationTimer = 2.0f; 
 }
 
 void Scene::DrawLoadNotification()
@@ -850,7 +773,6 @@ void Scene::DrawLoadNotification()
 
 		SDL_Rect rect = { 20, 20, 180, 30 };
 
-		// Fondo negro (ignorando cámara)
 		Engine::GetInstance().render->DrawRectangle(rect, 0, 0, 0, 200, true, false);
 
 		LOG("Cargando slot %d...", loadNotificationSlot);
@@ -863,7 +785,6 @@ void Scene::TriggerGameOver()
 	gameOverActive = true;
 	gameOverOption = GameOverOption::RETRY;
 
-	// Música de pausa o una específica de gameover (si tienes)
 	Engine::GetInstance().audio->PlayMusic(MUSIC_GAMEOVER);
 }
 
@@ -872,7 +793,6 @@ void Scene::DrawGameOver()
 	if (!gameOverActive || gameOverTexture == nullptr)
 		return;
 
-	// Guardar cámara
 	int oldCamX = Engine::GetInstance().render->camera.x;
 	int oldCamY = Engine::GetInstance().render->camera.y;
 
@@ -882,7 +802,6 @@ void Scene::DrawGameOver()
 	int winW = 0, winH = 0;
 	Engine::GetInstance().window->GetWindowSize(winW, winH);
 
-	// Dibujar imagen GAMEOVER en modo "cover"
 	float texW = 0.0f, texH = 0.0f;
 	if (SDL_GetTextureSize(gameOverTexture, &texW, &texH))
 	{
@@ -899,11 +818,9 @@ void Scene::DrawGameOver()
 		SDL_RenderTexture(Engine::GetInstance().render->renderer, gameOverTexture, nullptr, &dstRect);
 	}
 
-	// Overlay oscuro
 	SDL_Rect full = { 0, 0, winW, winH };
 	Engine::GetInstance().render->DrawRectangle(full, 0, 0, 0, 120, true, false);
 
-	// Botones (sin texto aún)
 	const int btnW = 340;
 	const int btnH = 60;
 	const int gap = 16;
@@ -927,17 +844,14 @@ void Scene::DrawGameOver()
 	drawBtn(retryRect, gameOverOption == GameOverOption::RETRY);
 	drawBtn(introRect, gameOverOption == GameOverOption::BACK_TO_TITLE);
 
-	// Restaurar cámara
 	Engine::GetInstance().render->camera.x = oldCamX;
 	Engine::GetInstance().render->camera.y = oldCamY;
 }
 
-// Called each loop iteration
 bool Scene::PostUpdate()
 {
 	bool ret = true;
 
-	// Ejecutar Save/Load de forma diferida (evita crasheos con Box2D)
 	if (pendingSave)
 	{
 		pendingSave = false;
@@ -950,7 +864,6 @@ bool Scene::PostUpdate()
 		LoadGameFromSlot(pendingSlot);
 	}
 
-	// Mostrar notificación de carga durante X segundos
 	DrawLoadNotification();
 	DrawGameOver();
 
@@ -967,7 +880,6 @@ bool Scene::PostUpdate()
 		int winW = 0, winH = 0;
 		Engine::GetInstance().window->GetWindowSize(winW, winH);
 
-		// Dibuja el fondo
 		if (levelSelectorTexture)
 		{
 			float texW = 0.0f, texH = 0.0f;
@@ -987,7 +899,6 @@ bool Scene::PostUpdate()
 			}
 		}
 
-		// Misma geometría que en Update() (debe coincidir)
 		const int y = (winH / 2) - 35;
 		const int box = 95;
 		const int gap = 60;
@@ -1026,19 +937,15 @@ bool Scene::PostUpdate()
 	{
 		if (pauseTexture != nullptr)
 		{
-			// Guardar cámara actual
 			int oldCamX = Engine::GetInstance().render->camera.x;
 			int oldCamY = Engine::GetInstance().render->camera.y;
 
-			// Forzar cámara a 0 para dibujar UI
 			Engine::GetInstance().render->camera.x = 0;
 			Engine::GetInstance().render->camera.y = 0;
 
-			// Tamaño de la ventana (en píxeles)
 			int winW = 0, winH = 0;
 			Engine::GetInstance().window->GetWindowSize(winW, winH);
 
-			// Tamaño real de la textura
 			float texW = 0.0f, texH = 0.0f;
 			if (!SDL_GetTextureSize(pauseTexture, &texW, &texH))
 			{
@@ -1046,11 +953,10 @@ bool Scene::PostUpdate()
 			}
 			else
 			{
-				// Escala uniforme para que "quepa" dentro de la ventana, manteniendo proporción
 				float scaleX = (texW > 0.0f) ? ((float)winW / texW) : 1.0f;
 				float scaleY = (texH > 0.0f) ? ((float)winH / texH) : 1.0f;
 				float fitScale = (scaleX > scaleY) ? scaleX : scaleY;
-				fitScale *= 1.0f; // dejar un margen del 20%
+				fitScale *= 1.0f; 
 
 				float dstW = texW * fitScale;
 				float dstH = texH * fitScale;
@@ -1060,11 +966,9 @@ bool Scene::PostUpdate()
 
 				SDL_FRect dstRect{ dstX, dstY, dstW, dstH };
 
-				// Dibujar directamente con SDL para poder controlar destino (tamaño/posición)
 				SDL_RenderTexture(Engine::GetInstance().render->renderer, pauseTexture, nullptr, &dstRect);
 			}
 
-			// Restaurar cámara
 			Engine::GetInstance().render->camera.x = oldCamX;
 			Engine::GetInstance().render->camera.y = oldCamY;
 		}
@@ -1072,13 +976,11 @@ bool Scene::PostUpdate()
 		{
 			LOG("pauseTexture is nullptr (no se puede dibujar la pausa).");
 		}
-		// Overlay oscuro para separar el fondo del UI
 		int w, h;
 		Engine::GetInstance().window->GetWindowSize(w, h);
 		SDL_Rect full = { 0, 0, w, h };
 		Engine::GetInstance().render->DrawRectangle(full, 0, 0, 0, 120, true, false);
 
-		// Botones
 		const int btnW = 320;
 		const int btnH = 55;
 		const int gap = 14;
@@ -1092,17 +994,14 @@ bool Scene::PostUpdate()
 
 			bool selected = ((int)pauseOption == i);
 
-			// fondo botón
 			if (selected)
 				Engine::GetInstance().render->DrawRectangle(r, 255, 255, 255, 220, true, false);
 			else
 				Engine::GetInstance().render->DrawRectangle(r, 255, 255, 255, 140, true, false);
 
-			// borde
 			Engine::GetInstance().render->DrawRectangle(r, 0, 0, 0, 255, false, false);
 		}
 
-		// Mini panel de "settings" placeholder
 		if (showSettingsFromPause)
 		{
 			SDL_Rect panel = { (w - 520) / 2, startY + 4 * (btnH + gap) + 10, 520, 120 };
@@ -1137,13 +1036,12 @@ bool Scene::PostUpdate()
 			SDL_RenderTexture(Engine::GetInstance().render->renderer, introTexture, nullptr, &dstRect);
 		}
 
-		// Highlight botones START / EXIT
 			const int btnW = 360;
 		const int btnH = 75;
 		const int gap = 18;
 
 		int startX = (winW - btnW) / 2;
-		int startY_Start = (winH / 2) + 140; // START más arriba
+		int startY_Start = (winH / 2) + 140; 
 		int startY_Exit = (winH / 2) + 160 + btnH + gap;
 
 		SDL_Rect startRect = { startX, startY_Start, btnW, btnH };
@@ -1153,16 +1051,13 @@ bool Scene::PostUpdate()
 			{
 				if (selected)
 				{
-					// Borde blanco brillante
 					Engine::GetInstance().render->DrawRectangle(r, 255, 255, 255, 255, false, false);
 
-					// Glow suave (opcional pero queda muy bien)
 					SDL_Rect glow = { r.x - 2, r.y - 2, r.w + 4, r.h + 4 };
 					Engine::GetInstance().render->DrawRectangle(glow, 255, 255, 255, 120, false, false);
 				}
 				else
 				{
-					// Borde muy sutil cuando no está seleccionado
 					Engine::GetInstance().render->DrawRectangle(r, 255, 255, 255, 80, false, false);
 				}
 			};
@@ -1180,7 +1075,6 @@ bool Scene::PostUpdate()
 	return ret;
 }
 
-// Called before quitting
 bool Scene::CleanUp()
 {
 

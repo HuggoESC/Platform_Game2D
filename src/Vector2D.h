@@ -4,17 +4,14 @@
 
 class Vector2D {
 public:
-    // Constructors
     Vector2D();
     Vector2D(float x, float y);
 
-    // Getters and Setters
     float getX() const;
     void setX(float x);
     float getY() const;
     void setY(float y);
 
-    // Vector operations
     float magnitude() const;
     Vector2D normalized() const;
     Vector2D operator+(const Vector2D& other) const;
@@ -22,7 +19,6 @@ public:
     Vector2D operator*(float scalar) const;
     Vector2D operator/(float scalar) const;
 
-    // Output stream operator
     friend std::ostream& operator<<(std::ostream& os, const Vector2D& vec);
 
 private:

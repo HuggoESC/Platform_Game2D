@@ -13,10 +13,10 @@ Audio::~Audio() {
 bool Audio::LoadWavFile(const char* path, SoundData& out) {
    
     if (!SDL_LoadWAV(path, &out.spec, &out.buf, &out.len)) {
-        SDL_Log("SDL_LoadWAV failed for %s: %s", path, SDL_GetError());
-        return false;
+ SDL_Log("SDL_LoadWAV failed for %s: %s", path, SDL_GetError());
+  return false;
     }
-    return true;
+ return true;
 }
 
 void Audio::FreeSound(SoundData& s) {
@@ -31,7 +31,6 @@ void Audio::FreeSound(SoundData& s) {
 bool Audio::EnsureDeviceOpen() {
     if (device_ != 0) return true;
 
-    // Ask for a reasonable default device format (float32, stereo, 48k).
     SDL_AudioSpec want{};
     want.format = SDL_AUDIO_F32;
     want.channels = 2;
@@ -43,16 +42,14 @@ bool Audio::EnsureDeviceOpen() {
         return false;
     }
 
-    if (!SDL_GetAudioDeviceFormat(device_, &device_spec_, nullptr)) {
+if (!SDL_GetAudioDeviceFormat(device_, &device_spec_, nullptr)) {
         LOG("Audio: SDL_GetAudioDeviceFormat failed: %s", SDL_GetError());
         SDL_CloseAudioDevice(device_);
         device_ = 0;
         return false;
     }
 
-    // Start audio
     SDL_ResumeAudioDevice(device_);
-
     return true;
 }
 
@@ -60,30 +57,30 @@ bool Audio::EnsureStreams() {
     if (!EnsureDeviceOpen()) return false;
 
     if (!music_stream_) {
-        music_stream_ = SDL_CreateAudioStream(nullptr, &device_spec_);
-        if (!music_stream_) {
-            LOG("Audio: SDL_CreateAudioStream (music) failed: %s", SDL_GetError());
+   music_stream_ = SDL_CreateAudioStream(nullptr, &device_spec_);
+    if (!music_stream_) {
+   LOG("Audio: SDL_CreateAudioStream (music) failed: %s", SDL_GetError());
             return false;
-        }
+    }
         if (!SDL_BindAudioStream(device_, music_stream_)) {
-            LOG("Audio: SDL_BindAudioStream (music) failed: %s", SDL_GetError());
+   LOG("Audio: SDL_BindAudioStream (music) failed: %s", SDL_GetError());
             SDL_DestroyAudioStream(music_stream_);
             music_stream_ = nullptr;
-            return false;
+   return false;
         }
     }
 
     if (!sfx_stream_) {
-        sfx_stream_ = SDL_CreateAudioStream(nullptr, &device_spec_);
+  sfx_stream_ = SDL_CreateAudioStream(nullptr, &device_spec_);
         if (!sfx_stream_) {
-            LOG("Audio: SDL_CreateAudioStream (sfx) failed: %s", SDL_GetError());
-            return false;
-        }
+LOG("Audio: SDL_CreateAudioStream (sfx) failed: %s", SDL_GetError());
+  return false;
+      }
         if (!SDL_BindAudioStream(device_, sfx_stream_)) {
             LOG("Audio: SDL_BindAudioStream (sfx) failed: %s", SDL_GetError());
             SDL_DestroyAudioStream(sfx_stream_);
             sfx_stream_ = nullptr;
-            return false;
+     return false;
         }
     }
 
@@ -93,9 +90,9 @@ bool Audio::EnsureStreams() {
 
 bool Audio::Awake() {
     LOG("Audio: initializing SDL3 audio");
-    if (SDL_InitSubSystem(SDL_INIT_AUDIO) != true /* SDL3 returns bool */) {
+    if (SDL_InitSubSystem(SDL_INIT_AUDIO) != true) {
         LOG("SDL_INIT_AUDIO failed: %s", SDL_GetError());
-        active = false;
+     active = false;
         return true; 
     }
 
@@ -108,39 +105,35 @@ bool Audio::Awake() {
 }
 
 bool Audio::CleanUp() {
-    // If audio is inactive or already quit elsewhere, don't touch SDL objects.
     if (!active || !SDL_WasInit(SDL_INIT_AUDIO)) {
-        music_stream_ = nullptr;
+   music_stream_ = nullptr;
         sfx_stream_ = nullptr;
         device_ = 0;
         sfx_.clear();
         FreeSound(music_data_);
-        return true;
-    }
+   return true;
+}
 
     LOG("Audio: cleaning up");
 
-    // Optional: stop pulling data while we tear down.
-    if (device_ != 0) SDL_PauseAudioDevice(device_);
+if (device_ != 0) SDL_PauseAudioDevice(device_);
 
-    // Destroy streams (auto-unbinds if bound).
     if (music_stream_) {
         SDL_DestroyAudioStream(music_stream_);
         music_stream_ = nullptr;
-    }
+  }
     FreeSound(music_data_);
 
     if (sfx_stream_) {
-        SDL_DestroyAudioStream(sfx_stream_);
+   SDL_DestroyAudioStream(sfx_stream_);
         sfx_stream_ = nullptr;
     }
     for (auto& s : sfx_) FreeSound(s);
     sfx_.clear();
 
-    // Close device after streams are gone.
     if (device_ != 0) {
         SDL_CloseAudioDevice(device_);
-        device_ = 0;
+ device_ = 0;
     }
 
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
@@ -154,20 +147,16 @@ bool Audio::Update(float dt)
 {
     if (!active) return true;
 
-    // Si no hay música cargada o no hay stream, no hacemos nada
     if (!music_stream_ || !music_data_.buf || music_data_.len == 0)
         return true;
 
-    // Cuando el dispositivo ha consumido todo lo que había encolado,
-    // volvemos a encolar el mismo buffer para hacer loop.
     int available = SDL_GetAudioStreamAvailable(music_stream_);
 
     if (available <= 0)
     {
-        // Re-encolar el mismo audio (loop infinito)
         if (!SDL_PutAudioStreamData(music_stream_, music_data_.buf, music_data_.len))
         {
-            LOG("Audio: SDL_PutAudioStreamData(music loop) failed: %s", SDL_GetError());
+ LOG("Audio: SDL_PutAudioStreamData(music loop) failed: %s", SDL_GetError());
         }
     }
 
@@ -178,31 +167,26 @@ bool Audio::PlayMusic(const char* path, float fadeTime) {
     if (!active) return false;
     if (!EnsureStreams()) return false;
 
-    // Si ya está sonando esta misma música, NO reiniciar (mantiene posición)
     if (path != nullptr && current_music_path_ == path)
     {
         return true;
     }
 
-    // Stop any existing music: clear stream + free buffer
     if (music_stream_) {
-        SDL_ClearAudioStream(music_stream_);
+  SDL_ClearAudioStream(music_stream_);
     }
     FreeSound(music_data_);
 
-    // Load WAV into memory
     if (!LoadWavFile(path, music_data_)) {
         LOG("Audio: cannot load music %s: %s", path, SDL_GetError());
         return false;
     }
 
-    // Set input format of the stream to match this file
     if (!SDL_SetAudioStreamFormat(music_stream_, &music_data_.spec, &device_spec_)) {
         LOG("Audio: SDL_SetAudioStreamFormat(music) failed: %s", SDL_GetError());
-        return false;
+   return false;
     }
 
-    // Queue once (simple play). For looping, requeue when drained (TODO).
     if (!SDL_PutAudioStreamData(music_stream_, music_data_.buf, music_data_.len)) {
         LOG("Audio: SDL_PutAudioStreamData(music) failed: %s", SDL_GetError());
         return false;
@@ -215,17 +199,17 @@ bool Audio::PlayMusic(const char* path, float fadeTime) {
 }
 
 int Audio::LoadFx(const char* path) {
-    if (!active) return 0;
+  if (!active) return 0;
     if (!EnsureStreams()) return 0;
 
     SoundData s{};
-    if (!LoadWavFile(path, s)) {
+ if (!LoadWavFile(path, s)) {
         LOG("Audio: cannot load fx %s: %s", path, SDL_GetError());
         return 0;
     }
 
     sfx_.push_back(s);
-    return static_cast<int>(sfx_.size()); 
+  return static_cast<int>(sfx_.size()); 
 }
 
 bool Audio::PlayFx(int id, int repeat) {
@@ -235,18 +219,16 @@ bool Audio::PlayFx(int id, int repeat) {
 
     const SoundData& s = sfx_[static_cast<size_t>(id - 1)];
 
-    // Make sure the SFX stream input format matches this sound
     if (!SDL_SetAudioStreamFormat(sfx_stream_, &s.spec, &device_spec_)) {
         LOG("Audio: SDL_SetAudioStreamFormat(sfx) failed: %s", SDL_GetError());
         return false;
     }
 
-    // Queue sound 'repeat+1' times
     for (int i = 0; i <= repeat; ++i) {
-        if (!SDL_PutAudioStreamData(sfx_stream_, s.buf, s.len)) {
-            LOG("Audio: SDL_PutAudioStreamData(sfx) failed: %s", SDL_GetError());
-            return false;
-        }
+ if (!SDL_PutAudioStreamData(sfx_stream_, s.buf, s.len)) {
+       LOG("Audio: SDL_PutAudioStreamData(sfx) failed: %s", SDL_GetError());
+      return false;
+   }
     }
 
     return true;

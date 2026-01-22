@@ -23,11 +23,9 @@ Player::~Player() {
 
 bool Player::Awake() {
 
-	// Initialize Player parameters
 	position = Vector2D(96,650);
 	spawnPosition = position;
 
-	// default look direction to the right
 	lookDir.setX(1.0f);
 	lookDir.setY(0.0f);
 
@@ -36,51 +34,40 @@ bool Player::Awake() {
 
 bool Player::Start() {
 
-	// load
 	std::unordered_map<int, std::string> aliases = { {0,"idle"},{10,"move"},{20,"jump"} };
 	anims.LoadFromTSX("Assets/Textures/satiro-Sheet v1.1.tsx", aliases);
 	anims.SetCurrent("idle");
 
-	// Initialize Player parameters 
 	texture = Engine::GetInstance().textures->Load("Assets/Textures/satiro-Sheet v1.1.png");
 	lifeTexture = Engine::GetInstance().textures->Load("Assets/Textures/Vida.png");
-	gemHudTexture = Engine::GetInstance().textures->Load(
-		"Assets/Textures/gem_round_32x32_12f_0d.png"
-	);
 	Engine::GetInstance().textures->GetSize(lifeTexture, lifeTexW, lifeTexH);
 
 	std::unordered_map<int, std::string> lifeAliases = {
-		{0,"life_4"}, // 4 vidas (full)
-		{1,"life_3"}, // 3 vidas
-		{2,"life_2"}, // 2 vidas
-		{3,"life_1"}, // 1 vida
-		{4,"life_0"}  // 0 vidas (dead)
+		{0,"life_4"},
+		{1,"life_3"},
+		{2,"life_2"},
+		{3,"life_1"},
+		{4,"life_0"}
 	};
 
 	lifeAnims.LoadFromTSX("Assets/Textures/Vida.tsx", lifeAliases);
 
-	// Empieza con vida completa:
 	hp = 4;
 	maxHp = 4;
 	UpdateLifeAnimation();
 
-	// Load dagger UI texture
 	daggerUITexture = Engine::GetInstance().textures->Load("Assets/Textures/Daga.png");
 	Engine::GetInstance().textures->GetSize(daggerUITexture, daggerUITexW, daggerUITexH);
 
-	// Add physics to the player - initialize physics body
 	texW =32;
 	texH =32;
 	pbody = Engine::GetInstance().physics->CreateCircle((int)position.getX(), (int)position.getY(), texW /2, bodyType::DYNAMIC);
 
-	// Assign player class (using "this") to the listener of the pbody. This makes the Physics module to call the OnCollision method
 	pbody->listener = shared_from_this();
-	// Assign collider type
 	pbody->ctype = ColliderType::PLAYER;
 
 	spawnPosition = position;
 
-	// initialize audio effect
 	pickCoinFxId = Engine::GetInstance().audio->LoadFx("Assets/Audio/Fx/coin-collision-sound-342335.wav");
 	pickGemFxId = Engine::GetInstance().audio->LoadFx("Assets/Audio/Fx/retro-coin-1-236677.wav");
 	pickliveFxId = Engine::GetInstance().audio->LoadFx("Assets/Audio/Fx/life_pickup.wav");
@@ -90,91 +77,96 @@ bool Player::Start() {
 
 bool Player::Update(float dt)
 { 
-		GetPhysicsValues();
-		Move();
-		Dash();
-		Jump();
-		Teleport();
-		ApplyPhysics();
-		Attack(dt);
-		Draw(dt);
+	GetPhysicsValues();
+	Move();
+	Dash();
+	Jump();
+	Teleport();
+	ApplyPhysics();
+	Attack(dt);
+	Draw(dt);
 
-		// dt viene en ms -> pasamos a segundos
-		float dtSec = dt / 1000.0f;
+	float dtSec = dt / 1000.0f;
 
-		if (invulnerable)
+	if (invulnerable)
+	{
+		invulnTimer -= dtSec;
+		if (invulnTimer <= 0.0f)
 		{
-			invulnTimer -= dtSec;
-			if (invulnTimer <= 0.0f)
-			{
-				invulnerable = false;
-				blinkVisible = true; // aseguramos que se vea al final
-			}
-
-			// parpadeo
-			blinkTimer -= dtSec;
-			if (blinkTimer <= 0.0f)
-			{
-				blinkTimer = blinkInterval;
-				blinkVisible = !blinkVisible;
-			}
+			invulnerable = false;
+			blinkVisible = true;
 		}
 
-		// Update attack cooldown
-		if (attackCooldown > 0.0f)
+		blinkTimer -= dtSec;
+		if (blinkTimer <= 0.0f)
 		{
-			attackCooldown -= dtSec;
+			blinkTimer = blinkInterval;
+			blinkVisible = !blinkVisible;
 		}
+	}
 
-	// Muerte por caida (no afecta en GodMode)
+	if (attackCooldown > 0.0f)
+	{
+		attackCooldown -= dtSec;
+	}
+
+	CircularAttack();
+
+	if (circularAttackCooldownTimer > 0.0f)
+	{
+		circularAttackCooldownTimer -= dtSec;
+	}
+
+	if (circularAttackActive)
+	{
+		circularAttackTimer -= dtSec;
+		if (circularAttackTimer <= 0.0f)
+		{
+			circularAttackActive = false;
+		}
+	}
+
 	if (!GodMode)
 	{
 		Vector2D mapSize = Engine::GetInstance().map->GetMapSizeInPixels();
-		// Si cae muy por debajo del mapa = muerto
 		float deathY = mapSize.getY() +100.0f;
 
 		if (position.getY() > deathY)
 		{
-				LOG("Player died. Respawning...");
+			LOG("Player died. Respawning...");
 
-				// ✅ Quitar vida por caída
-				if (!invulnerable)
+			if (!invulnerable)
+			{
+				invulnerable = true;
+				invulnTimer = invulnDuration;
+				blinkTimer = blinkInterval;
+				blinkVisible = true;
+
+				hp -= 1;
+				if (hp < 0) hp = 0;
+				UpdateLifeAnimation();
+
+				if (hp <= 0)
 				{
-					invulnerable = true;
-					invulnTimer = invulnDuration;
-					blinkTimer = blinkInterval;
-					blinkVisible = true;
-
-					hp -= 1;
-					if (hp < 0) hp = 0;
-					UpdateLifeAnimation();
-
-					if (hp <= 0)
-					{
-						Engine::GetInstance().scene->TriggerGameOver();
-						return true;
-					}
+					Engine::GetInstance().scene->TriggerGameOver();
+					return true;
 				}
+			}
 
-				// Reset velocidad fisica
-				Engine::GetInstance().physics->SetLinearVelocity(pbody, {0.0f,0.0f });
+			Engine::GetInstance().physics->SetLinearVelocity(pbody, {0.0f,0.0f });
 
-				// Teletransportar al spawn
-				pbody->SetPosition((int)spawnPosition.getX(), (int)spawnPosition.getY());
+			pbody->SetPosition((int)spawnPosition.getX(), (int)spawnPosition.getY());
 
-				// Actualizar valores internos de posici�n
-				position = spawnPosition;
+			position = spawnPosition;
 
-				// Reposicionar c�mara para centrar al jugador tras el respawn
-				Engine::GetInstance().render->camera.x = -position.getX() + Engine::GetInstance().render->camera.w /14;
-				Engine::GetInstance().render->camera.y = -position.getY() + Engine::GetInstance().render->camera.h *9 /10;
+			Engine::GetInstance().render->camera.x = -position.getX() + Engine::GetInstance().render->camera.w /14;
+			Engine::GetInstance().render->camera.y = -position.getY() + Engine::GetInstance().render->camera.h *9 /10;
 
-				// Reset estado
-				anims.SetCurrent("idle");
-				isJumping = false;
-				isDashing = false;
-				canDash = true;
-				jumpCount =0;
+			anims.SetCurrent("idle");
+			isJumping = false;
+			isDashing = false;
+			canDash = true;
+			jumpCount =0;
 		}
 	}
 	
@@ -183,26 +175,23 @@ bool Player::Update(float dt)
 		LOG("GOD MODE: %S", GodMode ? "ON" : "OFF");
 	}
 	
-
 	return true;
 }
 
 void Player::Teleport() {
-	// Teleport the player to a specific position for testing purposes
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_T) == KEY_DOWN) {
 		pbody->SetPosition(96,96);
 	}
 }
 
 void Player::GetPhysicsValues() {
-	velocity = Engine::GetInstance().physics->GetLinearVelocity(pbody);	// Read current velocity
-	velocity = {0, velocity.y }; // Reset horizontal velocity by default, this way the player stops when no key is pressed
+	velocity = Engine::GetInstance().physics->GetLinearVelocity(pbody);
+	velocity = {0, velocity.y };
 }
 
 void Player::Move() {
- if (isDashing && !isDecelerating) return;
+	if (isDashing && !isDecelerating) return;
 
-	// Update look direction from WASD input (if any)
 	int in_dx =0, in_dy =0;
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_W) == KEY_REPEAT) in_dy -=1;
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_S) == KEY_REPEAT) in_dy +=1;
@@ -234,28 +223,25 @@ void Player::Move() {
 		return; 
 	}
  
- // Move left/right
- if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT) {
- velocity.x = -speed;
- anims.SetCurrent("move");
- facingLeft = true;
- }
- else if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT) {
- velocity.x = speed;
- anims.SetCurrent("move");
- facingLeft = false;
- }
- else {
- anims.SetCurrent("idle");
- }
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT) {
+		velocity.x = -speed;
+		anims.SetCurrent("move");
+		facingLeft = true;
+	}
+	else if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT) {
+		velocity.x = speed;
+		anims.SetCurrent("move");
+		facingLeft = false;
+	}
+	else {
+		anims.SetCurrent("idle");
+	}
 }
 
 void Player::Jump()
 {
-	// Solo reaccionamos en el frame donde se pulsa la tecla
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN)
 	{
-		// PRIMER SALTO: estamos en el suelo
 		if (jumpCount ==0)
 		{
 			Engine::GetInstance().physics->SetYVelocity(pbody,0.0f);
@@ -263,72 +249,64 @@ void Player::Jump()
 
 			isJumping = true;
 			onGround = false;
-			jumpCount =1; // hemos gastado el primer salto
+			jumpCount =1;
 			anims.SetCurrent("jump");
 		}
-		// DOBLE SALTO: ya hemos saltado una vez, estamos en el aire
 		else if (jumpCount ==1)
 		{
 			Engine::GetInstance().physics->SetYVelocity(pbody,0.0f);
 			Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody,0.0f, -jumpForce, true);
 
 			isJumping = true;
-			jumpCount =2; // segundo salto gastado
+			jumpCount =2;
 			anims.SetCurrent("jump");
 		}
 	}
 }
 
-// Dash implementation
 void Player::Dash() {
- if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_LSHIFT) == KEY_DOWN && !isDashing && canDash == true) {
- isDashing = true;
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_LSHIFT) == KEY_DOWN && !isDashing && canDash == true) {
+		isDashing = true;
 		canDash = false;
- isDecelerating = false;
- currentDashSpeed =5.0f; 
- }
+		isDecelerating = false;
+		currentDashSpeed =5.0f; 
+	}
 }
 
-// Apply physics based on current state
 void Player::ApplyPhysics() {
- if (isDashing) {
- if (!isDecelerating) {
- currentDashSpeed += dashAcceleration;
- 
- if (currentDashSpeed >= maxDashSpeed) {
- isDecelerating = true;
- currentDashSpeed = maxDashSpeed;
- }
- }
- else {
- currentDashSpeed -= dashDeceleration;
- 
- if (currentDashSpeed <=0.0f) {
- isDashing = false;
- isDecelerating = false;
- currentDashSpeed =0.0f;
- }
- }
+	if (isDashing) {
+		if (!isDecelerating) {
+			currentDashSpeed += dashAcceleration;
+			
+			if (currentDashSpeed >= maxDashSpeed) {
+				isDecelerating = true;
+				currentDashSpeed = maxDashSpeed;
+			}
+		}
+		else {
+			currentDashSpeed -= dashDeceleration;
+			
+			if (currentDashSpeed <=0.0f) {
+				isDashing = false;
+				isDecelerating = false;
+				currentDashSpeed =0.0f;
+			}
+		}
 
- float direction = facingLeft ? -1.0f :1.0f;
- velocity.x = currentDashSpeed * direction;
- velocity.y =0.0f;
- }
+		float direction = facingLeft ? -1.0f :1.0f;
+		velocity.x = currentDashSpeed * direction;
+		velocity.y =0.0f;
+	}
 
- else if (isJumping) {
- velocity.y = Engine::GetInstance().physics->GetYVelocity(pbody);
- }
+	else if (isJumping) {
+		velocity.y = Engine::GetInstance().physics->GetYVelocity(pbody);
+	}
 
- // Apply velocity via helper
- Engine::GetInstance().physics->SetLinearVelocity(pbody, velocity);
+	Engine::GetInstance().physics->SetLinearVelocity(pbody, velocity);
 }
 
-// Attack implementation
 void Player::Attack(float dt) {
-	// dt is in milliseconds
-	// If attack already active -> advance it
 	if (attackActive) {
-		// compute movement this frame (pixels)
 		float move = attackSpeed * (dt /1000.0f);
 		if (move > attackRemaining) move = attackRemaining;
 		attackRemaining -= move;
@@ -337,8 +315,7 @@ void Player::Attack(float dt) {
 
 		LOG("Attack active at (%.1f, %.1f), remaining: %.1f", attackPos.getX(), attackPos.getY(), attackRemaining);
 
-		// Check for enemy hits during attack
-		float attackHitRange = 20.0f; // pixels to check around attack position
+		float attackHitRange = 20.0f;
 		for (const auto& entity : Engine::GetInstance().entityManager->entities) {
 			if (entity->type == EntityType::ENEMY) {
 				Enemy* enemy = dynamic_cast<Enemy*>(entity.get());
@@ -350,7 +327,6 @@ void Player::Attack(float dt) {
 					float dist = std::sqrt(dx * dx + dy * dy);
 					LOG("Enemy at (%.1f, %.1f), distance: %.1f", ex, ey, dist);
 					
-					// Boss has extended hit range of 100 pixels
 					if (enemy->IsBoss())
 					{
 						if (dist <= 100.0f)
@@ -359,7 +335,6 @@ void Player::Attack(float dt) {
 							enemy->OnAttackHit();
 						}
 					}
-					// Regular enemies have hit range of 20 pixels
 					else if (dist <= 20.0f && enemy->IsHitByAttack(attackPos.getX(), attackPos.getY(), attackHitRange))
 					{
 						LOG("ENEMY HIT!");
@@ -369,7 +344,6 @@ void Player::Attack(float dt) {
 			}
 		}
 
-		// After checking all enemies, destroy the ones that were hit
 		for (const auto& enemy : enemiesToDestroy) {
 			enemy->Destroy();
 		}
@@ -381,15 +355,12 @@ void Player::Attack(float dt) {
 		return;
 	}
 
-	// Start attack when E pressed
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_E) == KEY_DOWN) {
-		// Only allow attacks after picking up the Daga
 		if (!canAttack) {
 			LOG("Cannot attack - no Daga picked up");
 			return;
 		}
 
-		// Check if attack is on cooldown
 		if (attackCooldown > 0.0f) {
 			LOG("Attack on cooldown: %.2f seconds remaining", attackCooldown);
 			return;
@@ -397,7 +368,6 @@ void Player::Attack(float dt) {
 
 		LOG("Attack started!");
 
-		// Determine direction from WASD (use current input, allow diagonals)
 		int dx =0, dy =0;
 		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_W) == KEY_REPEAT) dy -=1;
 		if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_S) == KEY_REPEAT) dy +=1;
@@ -406,32 +376,25 @@ void Player::Attack(float dt) {
 
 		float fx =0.0f, fy =0.0f;
 
-		// If no WASD input, use lookDir
 		if (dx ==0 && dy ==0) {
 			fx = lookDir.getX();
 			fy = lookDir.getY();
-			// fallback to face right if lookDir zero
 			if (fx ==0.0f && fy ==0.0f) { fx =1.0f; fy =0.0f; }
 		}
 		else {
-			// Normalize direction
 			fx = (float)dx;
 			fy = (float)dy;
 			float len = sqrtf(fx * fx + fy * fy);
 			if (len ==0.0f) return;
 			fx /= len;
 			fy /= len;
-			// update lookDir to this explicit input
 			lookDir.setX(fx);
 			lookDir.setY(fy);
 		}
 
-		// Get player center
 		int px =0, py =0;
 		if (pbody) pbody->GetPosition(px, py);
 
-		// Spawn the attack *in front* of the player:
-		// offset by player's half-width (texW/2) plus a small margin so it doesn't overlap the sprite.
 		const float spawnOffset = (float)(texW /2) +12.0f;
 
 		attackDir.setX(fx);
@@ -442,9 +405,8 @@ void Player::Attack(float dt) {
 
 		attackRemaining = attackTotal;
 		attackActive = true;
-		attackCooldown = attackCooldownDuration; // Start cooldown
+		attackCooldown = attackCooldownDuration;
 
-		// Small immediate advance so triangle is clearly visible (optional)
 		float initialMove = std::min(2.0f, attackRemaining);
 		attackPos.setX(attackPos.getX() + attackDir.getX() * initialMove);
 		attackPos.setY(attackPos.getY() + attackDir.getY() * initialMove);
@@ -453,7 +415,54 @@ void Player::Attack(float dt) {
 	}
 }
 
-static const char* LifeFrameNameFromQuarters(int q) // q: 0..4
+void Player::CircularAttack() {
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_Q) == KEY_DOWN) {
+		if (circularAttackCooldownTimer <= 0.0f) {
+			LOG("Circular Attack activated!");
+			circularAttackActive = true;
+			circularAttackTimer = circularAttackDuration;
+			circularAttackCooldownTimer = circularAttackCooldown;
+		} else {
+			LOG("Circular Attack on cooldown: %.2f seconds remaining", circularAttackCooldownTimer);
+		}
+	}
+
+	if (circularAttackActive) {
+		int px = 0, py = 0;
+		if (pbody) pbody->GetPosition(px, py);
+
+		for (const auto& entity : Engine::GetInstance().entityManager->entities) {
+			if (entity->type == EntityType::ENEMY) {
+				Enemy* enemy = dynamic_cast<Enemy*>(entity.get());
+				if (enemy) {
+					float ex = enemy->position.getX();
+					float ey = enemy->position.getY();
+					float dx = (float)px - ex;
+					float dy = (float)py - ey;
+					float dist = std::sqrt(dx * dx + dy * dy);
+
+					if (dist <= circularAttackRadius) {
+						LOG("Circular Attack hit enemy at distance %.1f", dist);
+						
+						if (enemy->IsBoss()) {
+							LOG("Circular Attack cannot damage BOSS!");
+						} else {
+							LOG("Regular enemy hit by circular attack!");
+							enemiesToDestroy.push_back(entity);
+						}
+					}
+				}
+			}
+		}
+
+		for (const auto& enemy : enemiesToDestroy) {
+			enemy->Destroy();
+		}
+		enemiesToDestroy.clear();
+	}
+}
+
+static const char* LifeFrameNameFromQuarters(int q)
 {
 	if (q <= 0) return "life_0";
 	if (q == 1) return "life_1";
@@ -462,7 +471,6 @@ static const char* LifeFrameNameFromQuarters(int q) // q: 0..4
 	return "life_4";
 }
 
-// Draw the player
 void Player::Draw(float dt) {
 
 	anims.Update(dt);
@@ -483,7 +491,6 @@ void Player::Draw(float dt) {
 
 	SDL_Rect frame = animFrame;
 
-	// Parpadeo durante invulnerabilidad: a veces no dibujamos el sprite
 	if (!(invulnerable && !blinkVisible))
 	{
 		Engine::GetInstance().render->DrawTexture(
@@ -499,27 +506,20 @@ void Player::Draw(float dt) {
 		);
 	}
 
-	// Draw attack triangle (white) if active
 	if (attackActive) {
-		// tip at attackPos, base behind tip by attackPos.getX() - ex
 		float tx = attackPos.getX();
 		float ty = attackPos.getY();
 
-		// direction normalized already in attackDir
 		float dx = attackDir.getX();
 		float dy = attackDir.getY();
 
-		// base center
 		float bx = tx - dx * (float)attackLength;
 		float by = ty - dy * (float)attackLength;
 
-		// perpendicular
 		float px = -dy;
 		float py = dx;
-		// half width
 		float hw = (float)attackHalfWidth;
 
-		// base vertices
 		int ax = (int)std::round(bx + px * hw);
 		int ay = (int)std::round(by + py * hw);
 		int bx_i = (int)std::round(bx - px * hw);
@@ -527,10 +527,13 @@ void Player::Draw(float dt) {
 		int tipx = (int)std::round(tx);
 		int tipy = (int)std::round(ty);
 
-		// Draw triangle outline (3 lines) in world coords (Render will apply camera)
 		Engine::GetInstance().render->DrawLine(tipx, tipy, ax, ay,255,255,255,255, true);
 		Engine::GetInstance().render->DrawLine(ax, ay, bx_i, by_i,255,255,255,255, true);
 		Engine::GetInstance().render->DrawLine(bx_i, by_i, tipx, tipy,255,255,255,255, true);
+	}
+
+	if (circularAttackActive) {
+		Engine::GetInstance().render->DrawCircle(x, y, (int)circularAttackRadius, 0, 255, 0, 200);
 	}
 
 	if (lifeTexture)
@@ -545,13 +548,12 @@ void Player::Draw(float dt) {
 		int baseX = (hudScreenX - camX) / scale;
 		int baseY = (hudScreenY - camY) / scale;
 
-		// Dibujamos hasta 3 corazones (12 cuartos)
 		const int heartsToDraw = 3;
-		const int spacing = 34; // pixels entre corazones (ajusta si quieres)
+		const int spacing = 34;
 
 		for (int i = 0; i < heartsToDraw; ++i)
 		{
-			int q = hp - i * 4;           // cuartos que le quedan a este corazón
+			int q = hp - i * 4;
 			if (q < 0) q = 0;
 			if (q > 4) q = 4;
 
@@ -569,35 +571,9 @@ void Player::Draw(float dt) {
 			);
 		}
 
-		int gemsX = baseX;
-		int gemsY = baseY + 34; // debajo de los corazones
-
-		SDL_Rect gemFrame = { 0, 0, 32, 32 };
-
-		if (gemHudTexture)
-		{
-			Engine::GetInstance().render->DrawTextureScaled(
-				gemHudTexture,
-				gemsX,
-				gemsY,
-				&gemFrame,
-				0.6f,   
-				true    
-			);
-		}
-
-		Engine::GetInstance().render->DrawText(
-			std::to_string(gemsCollected).c_str(),
-			gemsX + 40,
-			gemsY + 6,
-			{ 255, 255, 255, 255 },
-			true  
-		);
-
-		// Draw dagger indicator if picked up
 		if (canAttack && daggerUITexture)
 		{
-			int daggerX = baseX + heartsToDraw * spacing + 16; // offset from hearts
+			int daggerX = baseX + heartsToDraw * spacing + 16;
 			int daggerY = baseY + 16;
 
 			Engine::GetInstance().render->DrawTexture(
@@ -606,7 +582,6 @@ void Player::Draw(float dt) {
 				daggerY - daggerUITexH / 2
 			);
 
-			// Draw cooldown indicator as white rectangle on dagger
 			if (attackCooldown > 0.0f)
 			{
 				float cooldownProgress = attackCooldown / attackCooldownDuration * -1;
@@ -631,7 +606,6 @@ void Player::Draw(float dt) {
 
 }
 
-// Called before quitting
 bool Player::CleanUp()
 {
 	LOG("Cleanup player");
@@ -639,7 +613,6 @@ bool Player::CleanUp()
 	return true;
 }
 
-// Define OnCollision function for the player. 
 void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 
 	if (GodMode) return;
@@ -648,7 +621,7 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 	{
 	case ColliderType::PLATFORM:
 	case ColliderType::TOPE:
-		LOG("Collision GROUND (PLATFORM/TOPE)"); // Estamos TOCANDO SUELO
+		LOG("Collision GROUND (PLATFORM/TOPE)");
 		onGround = true;
 		isJumping = false;
 		isDashing = false;
@@ -662,7 +635,6 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		LOG("Collision ITEM");
 		Engine::GetInstance().audio->PlayFx(pickCoinFxId);
 
-		// Capturamos el listener UNA SOLA VEZ y lo anulamos en el PhysBody
 		auto pickup = physB ? physB->listener.lock() : std::shared_ptr<Entity>();
 		if (physB) physB->listener.reset();
 
@@ -671,23 +643,23 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 			pickup->Destroy();
 		}
 
-		// enable attack when picking the dagger
 		canAttack = true;
 		break;
 	}
 
 	case ColliderType::GEM:
 	{
+		LOG("Collision GEM");
+		Engine::GetInstance().audio->PlayFx(pickGemFxId);
+
 		auto pickup = physB ? physB->listener.lock() : std::shared_ptr<Entity>();
-		if (physB) physB->listener.reset(); // evita dobles eventos
+		if (physB) physB->listener.reset();
 
 		if (pickup && pickup->active)
 		{
-			Engine::GetInstance().audio->PlayFx(pickGemFxId);
 			pickup->Destroy();
 			gemsCollected++;
 		}
-
 		break;
 	}
 
@@ -699,36 +671,31 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 		if (!pickup || !pickup->active) break;
 
 		Engine::GetInstance().audio->PlayFx(pickliveFxId);
-		ApplyLifeUp();          // suma 1/4 vida (tu lógica)
+		ApplyLifeUp();
 
-		pickup->Destroy();      // ahora es seguro
+		pickup->Destroy();
 
 		break;
 	}
 
 	case ColliderType::ENEMY:
 	{
-		// Si estamos en i-frames, no recibimos daño
 		if (invulnerable) break;
 
 		LOG("Collision ENEMY - Damage!");
 
-		// Activar invulnerabilidad + parpadeo
 		invulnerable = true;
 		invulnTimer = invulnDuration;
 		blinkTimer = blinkInterval;
 		blinkVisible = true;
 
-		// Quitar 1/4 de corazón
 		hp -= 1;
 		if (hp < 0) hp = 0;
 		UpdateLifeAnimation();
 
-		// Knockback opcional (para que se note el golpe)
 		float kx = facingLeft ? 2.5f : -2.5f;
 		Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, kx, -0.2f, true);
 
-		// Si te quedas sin vida -> GameOver (tu escena ya se encarga del checkpoint)
 		if (hp <= 0)
 		{
 			Engine::GetInstance().scene->TriggerGameOver();
@@ -739,27 +706,22 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 
 	case ColliderType::UNKNOWN:
 	{
-		// Boss projectile - damage player
 		if (invulnerable) break;
 
 		LOG("Collision BOSS PROJECTILE - Damage!");
 
-		// Activar invulnerabilidad + parpadeo
 		invulnerable = true;
 		invulnTimer = invulnDuration;
 		blinkTimer = blinkInterval;
 		blinkVisible = true;
 
-		// Quitar 1/4 de corazón
 		hp -= 1;
 		if (hp < 0) hp = 0;
 		UpdateLifeAnimation();
 
-		// Knockback opcional (para que se note el golpe)
 		float kx = facingLeft ? 2.5f : -2.5f;
 		Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, kx, -0.2f, true);
 
-		// Si te quedas sin vida -> GameOver
 		if (hp <= 0)
 		{
 			Engine::GetInstance().scene->TriggerGameOver();
@@ -773,7 +735,6 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 	}
 }
 
-// Define OnCollisionEnd function for the player.
 void Player::OnCollisionEnd(PhysBody* physA, PhysBody* physB)
 {
 	if (GodMode) return;
@@ -783,7 +744,7 @@ void Player::OnCollisionEnd(PhysBody* physA, PhysBody* physB)
 	case ColliderType::PLATFORM:
 	case ColliderType::TOPE:
 		LOG("End Collision GROUND (PLATFORM/TOPE)");
-		onGround = false; // ya no estamos apoyados
+		onGround = false;
 		break;
 
 	case ColliderType::ITEM:
@@ -799,26 +760,19 @@ void Player::OnCollisionEnd(PhysBody* physA, PhysBody* physB)
 	}
 }
 
-// Life management
-
 void Player::UpdateLifeAnimation()
 {
-	// Clamp
 	if (maxHp < 4) maxHp = 4;
 	if (maxHp > MAX_HP) maxHp = MAX_HP;
 
 	if (hp < 0) hp = 0;
 	if (hp > maxHp) hp = maxHp;
-
-	// No hacemos SetCurrent aquí porque ahora vamos a dibujar varios corazones
-	// El frame se seleccionará en Draw() corazón a corazón.
 }
 
 void Player::ApplyLifeUp(int amount)
 {
 	if (amount <= 0) return;
 
-	// Si no estás al máximo, cura
 	if (hp < maxHp)
 	{
 		hp += amount;
@@ -827,7 +781,6 @@ void Player::ApplyLifeUp(int amount)
 		return;
 	}
 
-	// Si estás al máximo, aumenta el máximo (hasta 12) y cura ese extra
 	if (maxHp < MAX_HP)
 	{
 		maxHp += amount;
@@ -842,10 +795,9 @@ void Player::ApplyLifeUp(int amount)
 
 void Player::ResetLivesAfterGameOver()
 {
-	// Si quieres mantener la capacidad extra (maxHp) tras morir:
 	if (maxHp < 4) maxHp = 4;
 
-	hp = 4;                 // respawn con 1 corazón lleno
+	hp = 4;
 	if (hp > maxHp) hp = maxHp;
 
 	UpdateLifeAnimation();

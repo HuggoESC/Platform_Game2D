@@ -15,16 +15,12 @@ public:
 
 	Audio();
 
-	// Destructor
 	virtual ~Audio();
 
-	// Called before render is available
 	bool Awake();
 
-	// Called before quitting
 	bool CleanUp();
 
-    // Called each loop iteration
     bool Update(float dt) override;
 
 	// Play a music file

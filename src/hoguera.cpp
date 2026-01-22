@@ -21,26 +21,21 @@ bool hoguera::Awake()
 
 bool hoguera::Start()
 {
-    // Animación
     std::unordered_map<int, std::string> aliases = {
-     {0, "on"},   // fuego animado (tile id 0)
-     {5, "off"}   // apagada (tile id 5) <-- AJUSTA EL 5 si tu TSX usa otro id
+     {0, "on"},   
+     {5, "off"}   
     };
     anims.LoadFromTSX("Assets/Textures/hoguera.tsx", aliases);
-    anims.SetCurrent("off");  // empieza apagada
+    anims.SetCurrent("off"); 
 
-    // Textura
     texture = Engine::GetInstance().textures->Load("Assets/Textures/hoguera.png");
 
     texW = anims.GetCurrentFrame().w;
     texH = anims.GetCurrentFrame().h;
 
-   // Sensor para detectar al jugador
-  // En Tiled el objeto llega como esquina sup-izq, lo convertimos a centro
     int cx = (int)position.getX() + texW / 2;
     int cy = (int)position.getY() + texH / 2;
 
-    // Guardamos posición ya como centro para draw/checkpoint
     position.setX((float)cx);
     position.setY((float)cy);
 
@@ -85,8 +80,6 @@ void hoguera::OnCollision(PhysBody* physA, PhysBody* physB)
 
         Engine::GetInstance().scene->SetCheckpoint(position);
 
-        // Si quieres un sonido al activar:
-        // Engine::GetInstance().audio->PlayFx(fxCheckpointId);
     }
 }
 

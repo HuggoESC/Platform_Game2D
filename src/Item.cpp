@@ -22,7 +22,6 @@ bool Item::Awake() {
 
 bool Item::Start() {
 
-	//initilize textures
 	textureDaga = Engine::GetInstance().textures->Load("Assets/Textures/Daga.png");
 	
 	Engine::GetInstance().textures.get()->GetSize(textureDaga, texW, texH);
@@ -30,7 +29,8 @@ bool Item::Start() {
 
 	pbody->ctype = ColliderType::ITEM;
 
-	pbody->listener = shared_from_this();	return true;
+	pbody->listener = shared_from_this();	
+	return true;
 }
 
 bool Item::Update(float dt)
@@ -59,7 +59,6 @@ bool Item::CleanUp()
 
 bool Item::Destroy()
 {
-	LOG("Destroying item");
 
 	active = false;
 

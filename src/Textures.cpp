@@ -8,12 +8,10 @@ Textures::Textures() : Module()
 	name = "textures";
 }
 
-// Destructor
 Textures::~Textures()
 {
 }
 
-// Called before render is available
 bool Textures::Awake()
 {
 	LOG("Init Image library");
@@ -22,7 +20,6 @@ bool Textures::Awake()
 	return ret;
 }
 
-// Called before the first frame
 bool Textures::Start()
 {
 	LOG("start textures");
@@ -30,7 +27,6 @@ bool Textures::Start()
 	return ret;
 }
 
-// Called before quitting
 bool Textures::CleanUp()
 {
 	LOG("Freeing textures and Image library");
@@ -42,7 +38,6 @@ bool Textures::CleanUp()
 	return true;
 }
 
-// Load new texture from file path
 SDL_Texture* const Textures::Load(const char* path)
 {
 	SDL_Texture* texture = NULL;
@@ -55,13 +50,12 @@ SDL_Texture* const Textures::Load(const char* path)
 	else
 	{
 		texture = LoadSurface(surface);
-		SDL_DestroySurface(surface); // SDL3: free with SDL_DestroySurface
+		SDL_DestroySurface(surface);
 	}
 
 	return texture;
 }
 
-// Unload texture
 bool Textures::UnLoad(SDL_Texture* texture)
 {
 	for (const auto& _texture : textures) {
@@ -73,7 +67,6 @@ bool Textures::UnLoad(SDL_Texture* texture)
 	return false;
 }
 
-// Translate a surface into a texture
 SDL_Texture* const Textures::LoadSurface(SDL_Surface* surface)
 {
 	SDL_Texture* texture = SDL_CreateTextureFromSurface(Engine::GetInstance().render->renderer, surface);
@@ -90,7 +83,6 @@ SDL_Texture* const Textures::LoadSurface(SDL_Surface* surface)
 	return texture;
 }
 
-// Retrieve size of a texture
 void Textures::GetSize(const SDL_Texture* texture, int& width, int& height) const
 {
 	float tw = 0.0f;

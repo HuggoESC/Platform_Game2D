@@ -34,11 +34,9 @@ class AnimationSet {
 public:
     AnimationSet();
 
-    // load from TSX with aliases {baseTileId -> name}
     bool LoadFromTSX(const char* tsxPath,
         const std::unordered_map<int, std::string>& aliases);
 
-    // manage animations
     void SetCurrent(const std::string& name);
     void Update(float dtSeconds);
     const SDL_Rect& GetCurrentFrame() const;
