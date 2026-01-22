@@ -465,6 +465,18 @@ bool Scene::Update(float dt)
 		pendingSlot = 1;
 	}
 
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_F1) == KEY_DOWN)
+	{
+		LOG("F1 pressed - Loading Level 1");
+		LoadLevel(1);
+	}
+
+	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_F2) == KEY_DOWN)
+	{
+		LOG("F2 pressed - Loading Level 2");
+		LoadLevel(2);
+	}
+
 	return true;
 }
 
