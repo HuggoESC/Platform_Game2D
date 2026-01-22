@@ -45,6 +45,7 @@ static const char* MAP_LEVEL1 = "Level01.tmx";
 static const char* MAP_LEVEL2 = "Level02.tmx";
 
 static const char* MUSIC_LEVEL1 = "Assets/Audio/Music/level-iv-339695.wav";
+static const char* MUSIC_LEVEL2 = "Assets/Audio/Music/FinalBoss.wav";
 static const char* MUSIC_PAUSE = "Assets/Audio/Music/PauseTheme.wav";
 static const char* MUSIC_GAMEOVER = "Assets/Audio/Music/GameOver.wav";
 static const char* MUSIC_INTRO = "Assets/Audio/Music/IntroTheme.wav";
@@ -667,19 +668,22 @@ void Scene::LoadLevel(int level)
 
 	comingFromLevelTransition = false;
 
-	auto e = Engine::GetInstance().entityManager->CreateEntity(EntityType::ENEMY);
-	auto en = std::dynamic_pointer_cast<Enemy>(e);
-
-	if (en)
+	if (level == 2)
 	{
-		int spawnX = 1480;
-		int spawnY = 650;
+		auto e = Engine::GetInstance().entityManager->CreateEntity(EntityType::ENEMY);
+		auto en = std::dynamic_pointer_cast<Enemy>(e);
 
-		en->SetPosition(spawnX, spawnY);
+		if (en)
+		{
+			int spawnX = 1480;
+			int spawnY = 650;
 
-		en->MakeBoss();
+			en->SetPosition(spawnX, spawnY);
 
-		LOG("Spawned Boss (Cthulhu) at %d, %d", spawnX, spawnY);
+			en->MakeBoss();
+
+			LOG("Spawned Boss (Cthulhu) at %d, %d", spawnX, spawnY);
+		}
 	}
 
 	if (level == 1)
@@ -731,6 +735,15 @@ void Scene::LoadLevel(int level)
 
 	cam.x = targetCamX;
 	cam.y = targetCamY;
+
+	if (level == 1)
+	{
+		Engine::GetInstance().audio->PlayMusic(MUSIC_LEVEL1);
+	}
+	else if (level == 2)
+	{
+		Engine::GetInstance().audio->PlayMusic(MUSIC_LEVEL2);
+	}
 
 	gameState = GameState::PLAYING;
 
