@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Entity.h"
 #include "Animation.h"
@@ -183,4 +183,26 @@ private:
 	float attack1ProjectileDistance = 0.0f;  // distance traveled so far
 	const float attack1ProjectileMaxDistance = 128.0f;  // 4 squares (4 * 32)
 	bool attack1Active = false;  // is attack 1 currently active
+	
+	// Attack 1 phases
+	bool attack1Approaching = false;  // boss is moving toward player
+	float attack1WaitTimer = 0.0f;  // timer for waiting before attack
+	const float attack1WaitDuration = 0.5f;  // 0.5 seconds before firing
+	const float attack1Distance = 60.0f;  // maintain 70 pixels distance from player
+
+	// --- Boss Flying State ---
+	float flyingDuration = 3.0f;  // seconds to fly
+	float flyingTimer = 0.0f;// timer for current flight
+	Vector2D bossSpawnPosition;  // initial spawn position for fallback
+	
+	// Flying movement smoothing
+	float bossCurrentVelocityX = 0.0f;  // current X velocity during flight
+	float bossCurrentVelocityY = 0.0f;  // current Y velocity during flight
+	float bossFlightAcceleration = 2.0f;  // pixels/sec² acceleration during flight
+	float bossMaxFlightSpeed = 32.0f;  // max speed during flight (pixels/sec)
+
+	// State timeout handling
+	BossState lastBossState = BossState::IDLE;  // tracks previous state
+	float stateUnchangedTimer = 0.0f;  // timer to detect stuck states
+	const float stateTimeoutDuration = 6.0f;  // 6 seconds before forcing flight
 };

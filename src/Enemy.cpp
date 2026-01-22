@@ -266,140 +266,237 @@ bool Enemy::Update(float dt)
                 stateTimer = 0.0f;
                 stateTransitionTime = 0.0f;  // Reset for next combat phase
             }
+
+        // --- STATE TIMEOUT CHECK (only during COMBAT and attacks, NOT IDLE) ---
+            if (bossState != lastBossState)
+       {
+  // State changed, reset timer
+    lastBossState = bossState;
+           stateUnchangedTimer = 0.0f;
+         }
+            else if (bossState == BossState::COMBAT)
+       {
+         // In COMBAT state, check for timeout
+    stateUnchangedTimer += dtSec;
+
+         // If stuck in COMBAT for 5 seconds, spawn minion and go to FLYING
+           if (stateUnchangedTimer >= stateTimeoutDuration)
+    {
+        LOG("CTHULHU STUCK IN COMBAT FOR 5 SECONDS - FORCING FLIGHT");
+
+           // Spawn a flying enemy at current boss location
+auto flyer = std::make_shared<Enemy>(bx, by - 50);
+      flyer->MakeFlying();
+    Engine::GetInstance().entityManager->AddEntity(flyer);
+        LOG("TIMEOUT: Flying minion spawned at (%.0f, %.0f)", (float)bx, (float)(by - 50));
+
+          // Force transition to FLYING state
+     bossState = BossState::FLYING;
+        stateTimer = 0.0f;
+         stateTransitionTime = 0.0f;
+             stateUnchangedTimer = 0.0f;
+
+        LOG("CTHULHU FORCED INTO FLIGHT");
+         }
+    }
+        }
+
+  // --- Check timeout for attack states ---
+  if (bossState == BossState::ATTACK_1 || bossState == BossState::ATTACK_2)
+     {
+     if (bossState != lastBossState)
+  {
+        // State changed, reset timer
+    lastBossState = bossState;
+   stateUnchangedTimer = 0.0f;
+    }
+            else
+      {
+   // Attack state unchanged, increment timeout timer
+       stateUnchangedTimer += dtSec;
+
+  // If stuck in attack state for 5 seconds, spawn minion and go to FLYING
+        if (stateUnchangedTimer >= stateTimeoutDuration)
+    {
+    LOG("CTHULHU STUCK IN ATTACK STATE FOR 5 SECONDS - FORCING FLIGHT");
+
+       // Spawn a flying enemy at current boss location
+           auto flyer = std::make_shared<Enemy>(bx, by - 50);
+            flyer->MakeFlying();
+    Engine::GetInstance().entityManager->AddEntity(flyer);
+        LOG("TIMEOUT: Flying minion spawned at (%.0f, %.0f)", (float)bx, (float)(by - 50));
+
+      // Force transition to FLYING state
+   bossState = BossState::FLYING;
+        stateTimer = 0.0f;
+      stateTransitionTime = 0.0f;
+            stateUnchangedTimer = 0.0f;
+
+           LOG("CTHULHU FORCED INTO FLIGHT");
+           }
+  }
         }
 
         // --- ATTACK STATES (placeholder for now) ---
         // These will be implemented later with actual attack patterns
         if (bossState == BossState::ATTACK_1)
-        {
-            // Initialize attack on first frame - use a flag to track if we've initialized
-            static bool attack1Initialized = false;
+     {
+ // Initialize attack on first frame - use a flag to track if we've initialized
+static bool attack1Initialized = false;
             if (!attack1Initialized)
-            {
-                attack1Initialized = true;
-                attack1Active = true;
-                attack1ProjectileDistance = 0.0f;
+       {
+              attack1Initialized = true;
+      attack1Approaching = true;
+                attack1WaitTimer = 0.0f;
+       attack1Active = false;
+             attack1ProjectileDistance = 0.0f;
+        
+         LOG("ATTACK 1: Start approaching player");
+   }
 
-                // Get player position for direction
-                Vector2D playerPos = Vector2D(0.0f, 0.0f);
-                for (const auto& entPtr : Engine::GetInstance().entityManager->entities)
-                {
-                    if (entPtr && entPtr->type == EntityType::PLAYER)
-                    {
-                        playerPos = entPtr->position;
-                        break;
+            // Find player position
+  Vector2D playerPos = Vector2D(0.0f, 0.0f);
+            bool foundPlayer = false;
+            for (const auto& entPtr : Engine::GetInstance().entityManager->entities)
+       {
+              if (entPtr && entPtr->type == EntityType::PLAYER)
+          {
+  playerPos = entPtr->position;
+      foundPlayer = true;
+        break;
+       }
+    }
+
+            if (foundPlayer)
+    {
+                // Phase 1: Move toward player until 70 pixels away
+      if (attack1Approaching)
+         {
+       float distToPlayer = fabsf(playerPos.getX() - bx);
+           
+                // Calculate direction toward player
+      int moveDir = (playerPos.getX() > bx) ? 1 : -1;
+                    
+        // Check if we're close enough
+if (distToPlayer <= attack1Distance)
+     {
+         // Stop moving, start waiting
+        attack1Approaching = false;
+    attack1WaitTimer = 0.0f;
+          Engine::GetInstance().physics->SetXVelocity(pbody, 0.0f);
+    LOG("ATTACK 1: Reached distance, waiting 0.5s before attack");
+         }
+       else
+           {
+        // Move toward player at boss speed
+Engine::GetInstance().physics->SetXVelocity(pbody, moveDir * bossSpeed);
+           }
+}
+   // Phase 2: Wait 0.5 seconds then fire projectile
+      else
+           {
+         attack1WaitTimer += dtSec;
+      
+      if (attack1WaitTimer >= attack1WaitDuration)
+           {
+   // Time to attack! Fire projectile
+       if (!attack1Active)
+    {
+        attack1Active = true;
+          attack1ProjectileDistance = 0.0f;
+   
+          // Calculate direction (only horizontal, toward player)
+     float dirX = (playerPos.getX() > bx) ? 1.0f : -1.0f;
+              attack1ProjectileDir.setX(dirX);
+           attack1ProjectileDir.setY(0.0f);
+  
+              // Spawn projectile at boss center
+       attack1ProjectilePos.setX((float)bx);
+  attack1ProjectilePos.setY((float)by);
+       
+      // Create projectile physics body
+         int projW = 48;
+          int projH = 48;
+        attack1Projectile = Engine::GetInstance().physics->CreateRectangleSensor(
+          (int)attack1ProjectilePos.getX(),
+         (int)attack1ProjectilePos.getY(),
+          projW,
+            projH,
+   KINEMATIC
+   );
+ attack1Projectile->ctype = ColliderType::UNKNOWN;
+         attack1Projectile->listener = shared_from_this();
+    
+       LOG("ATTACK 1: Projectile fired at (%.0f, %.0f), direction %.0f", 
+   attack1ProjectilePos.getX(), attack1ProjectilePos.getY(), dirX);
+         }
                     }
-                }
+ }
+      }
 
-                // Calculate direction (only horizontal)
-                Vector2D bossToPlayer = Vector2D(playerPos.getX() - bx, 0.0f);
-                float len = sqrtf(bossToPlayer.getX() * bossToPlayer.getX());
-                if (len > 0.0f)
-                {
-                    attack1ProjectileDir.setX(bossToPlayer.getX() / len);
-                    attack1ProjectileDir.setY(0.0f);
-                }
-                else
-                {
-                    // Default to boss direction if no player found
-                    attack1ProjectileDir.setX((float)bossDirection);
-                    attack1ProjectileDir.setY(0.0f);
-                }
+          // Update projectile movement if active
+       if (attack1Active && attack1Projectile != nullptr)
+   {
+       float moveAmount = attack1ProjectileSpeed * dtSec;
+      attack1ProjectileDistance += moveAmount;
 
-                // Spawn projectile in the middle of the boss
-                attack1ProjectilePos.setX((float)bx);
-                attack1ProjectilePos.setY((float)by);
+     // Move projectile
+    attack1ProjectilePos.setX(attack1ProjectilePos.getX() + attack1ProjectileDir.getX() * moveAmount);
+        attack1ProjectilePos.setY(attack1ProjectilePos.getY() + attack1ProjectileDir.getY() * moveAmount);
 
-                // Create a sensor rectangle for the projectile (doesn't collide with world)
-                // Make it bigger: 48x48 instead of 32x32
-                int projW = 48;  // projectile width (bigger)
-                int projH = 48;  // projectile height (bigger)
-                attack1Projectile = Engine::GetInstance().physics->CreateRectangleSensor(
-                    (int)attack1ProjectilePos.getX(),
-                    (int)attack1ProjectilePos.getY(),
-                    projW,
-                    projH,
-                    KINEMATIC  // kinematic body - we control it
-                );
-                attack1Projectile->ctype = ColliderType::UNKNOWN;  // don't collide with normal stuff
-                attack1Projectile->listener = shared_from_this();
+           // Update physics body position
+    attack1Projectile->SetPosition(
+       (int)attack1ProjectilePos.getX(),
+          (int)attack1ProjectilePos.getY()
+     );
 
-                LOG("ATTACK 1: Projectile spawned at (%.0f, %.0f), direction (%.2f, %.2f)", 
-                    attack1ProjectilePos.getX(), attack1ProjectilePos.getY(),
-                    attack1ProjectileDir.getX(), attack1ProjectileDir.getY());
+ // Draw the projectile
+             SDL_Rect projRect = {
+        (int)attack1ProjectilePos.getX() - 24,
+    (int)attack1ProjectilePos.getY() - 24,
+        48,
+  48
+           };
+      Engine::GetInstance().render->DrawRectangle(projRect, 255, 255, 0, 200, true, true);
+
+          // Check collision with player
+         if (foundPlayer)
+             {
+     float dx = attack1ProjectilePos.getX() - playerPos.getX();
+ float dy = attack1ProjectilePos.getY() - playerPos.getY();
+          float dist = sqrtf(dx * dx + dy * dy);
+
+      if (dist <= 40.0f)
+           {
+    LOG("ATTACK 1: Hit player!");
+  attack1ProjectileDistance = attack1ProjectileMaxDistance + 32.0f;
+         }
             }
 
-            // Update projectile movement
-            if (attack1Active && attack1Projectile != nullptr)
-            {
-                float moveAmount = attack1ProjectileSpeed * dtSec;
-                attack1ProjectileDistance += moveAmount;
-
-                // Move projectile
-                attack1ProjectilePos.setX(attack1ProjectilePos.getX() + attack1ProjectileDir.getX() * moveAmount);
-                attack1ProjectilePos.setY(attack1ProjectilePos.getY() + attack1ProjectileDir.getY() * moveAmount);
-
-                // Update physics body position
-                attack1Projectile->SetPosition(
-                    (int)attack1ProjectilePos.getX(),
-                    (int)attack1ProjectilePos.getY()
-                );
-
-                // Draw the projectile as a yellow rectangle (bigger: 48x48)
-                SDL_Rect projRect = {
-                    (int)attack1ProjectilePos.getX() - 24,
-                    (int)attack1ProjectilePos.getY() - 24,
-                    48,
-                    48
-                };
-                Engine::GetInstance().render->DrawRectangle(projRect, 255, 255, 0, 200, true, true);
-
-                // Check collision with player manually
-                bool hitPlayer = false;
-                for (const auto& entPtr : Engine::GetInstance().entityManager->entities)
+             // Check if projectile has traveled max distance
+   if (attack1ProjectileDistance >= (attack1ProjectileMaxDistance + 32.0f))
                 {
-                    if (entPtr && entPtr->type == EntityType::PLAYER)
-                    {
-                        Vector2D playerPos = entPtr->position;
-                        float dx = attack1ProjectilePos.getX() - playerPos.getX();
-                        float dy = attack1ProjectilePos.getY() - playerPos.getY();
-                        float dist = sqrtf(dx * dx + dy * dy);
+       LOG("ATTACK 1: Projectile disappeared");
+        attack1Active = false;
 
-                        // Hit range of ~40 pixels for player collision (bigger projectile)
-                        if (dist <= 40.0f)
-                        {
-                            LOG("ATTACK 1: Hit player!");
-                            hitPlayer = true;
-                            attack1ProjectileDistance = attack1ProjectileMaxDistance + 32.0f;  // End attack (travel 32 pixels further)
-                        }
-                        break;
-                    }
-                }
-
-                // Check if projectile has traveled max distance
-                if (attack1ProjectileDistance >= (attack1ProjectileMaxDistance + 32.0f))
-                {
-                    LOG("ATTACK 1: Projectile disappeared after traveling 160 pixels");
-                    attack1Active = false;
-
-                    // Clean up projectile
-                    if (attack1Projectile)
-                    {
-                        Engine::GetInstance().physics->DeletePhysBody(attack1Projectile);
-                        attack1Projectile = nullptr;
-                    }
-                }
-            }
-
-            // After attack finishes, return to combat
-            if (!attack1Active && stateTimer > 0.5f)
+               if (attack1Projectile)
             {
-                bossState = BossState::COMBAT;
-                stateTimer = 0.0f;
-                stateTransitionTime = 0.0f;
-                attack1Initialized = false;  // Reset for next attack
-                LOG("CTHULHU COMBAT");
-            }
+        Engine::GetInstance().physics->DeletePhysBody(attack1Projectile);
+          attack1Projectile = nullptr;
+    }
+    }
+  }
+
+            // After attack finishes and projectile is gone, return to combat
+         if (!attack1Active && attack1WaitTimer >= attack1WaitDuration + 0.2f)
+            {
+        bossState = BossState::COMBAT;
+   stateTimer = 0.0f;
+         stateTransitionTime = 0.0f;
+        attack1Initialized = false;
+    attack1Approaching = false;
+  LOG("CTHULHU COMBAT");
+  }
         }
 
         if (bossState == BossState::ATTACK_2)
@@ -427,11 +524,12 @@ bool Enemy::Update(float dt)
                     Engine::GetInstance().entityManager->AddEntity(slime);
                     LOG("ATTACK 2: Slime spawned at (%.0f, %.0f)", (float)spawnX, (float)spawnY);
 
-                    // Spawn a flying enemy
-                    auto flyer = std::make_shared<Enemy>(spawnX + 50, spawnY - 50); // offset flying enemy
+                    // Spawn a flying enemy - offset should also respect direction
+                    int flyerOffsetX = 50 * bossDirection; // offset in same direction as boss direction
+                    auto flyer = std::make_shared<Enemy>(spawnX + flyerOffsetX, spawnY - 50);
                     flyer->MakeFlying();
                     Engine::GetInstance().entityManager->AddEntity(flyer);
-                    LOG("ATTACK 2: Flying enemy spawned at (%.0f, %.0f)", (float)(spawnX + 50), (float)(spawnY - 50));
+                    LOG("ATTACK 2: Flying enemy spawned at (%.0f, %.0f)", (float)(spawnX + flyerOffsetX), (float)(spawnY - 50));
                 }
                 else
                 {
@@ -452,14 +550,233 @@ bool Enemy::Update(float dt)
 
         if (bossState == BossState::FLYING)
         {
-            // TODO: Implement flying/dodging behavior
-            // For now, after a duration, return to COMBAT
-            if (stateTimer > 2.0f)
+            // Initialize flying on first frame
+     static bool flyingInitialized = false;
+if (!flyingInitialized)
             {
-                bossState = BossState::COMBAT;
-                stateTimer = 0.0f;
-                stateTransitionTime = 0.0f;
-                LOG("CTHULHU COMBAT");
+  flyingInitialized = true;
+           flyingTimer = 0.0f;
+    
+        // Disable collisions by converting to kinematic body
+      // Save current position before changing body type
+         int bx_temp = (int)position.getX();
+     int by_temp = (int)position.getY();
+     
+                // Delete current body and recreate as kinematic (no collisions)
+                Engine::GetInstance().physics->DeletePhysBody(pbody);
+                pbody = Engine::GetInstance().physics->CreateRectangle(
+             bx_temp, by_temp,
+      bossWidth,
+     bossHeight,
+             KINEMATIC  // Kinematic bodies don't collide with terrain
+       );
+      pbody->ctype = ColliderType::ENEMY;
+         pbody->listener = shared_from_this();
+    b2Body_SetFixedRotation(pbody->body, true);
+      
+        // Remove gravity during flight
+       b2Body_SetGravityScale(pbody->body, 0.0f);
+      
+        // Reset velocity tracking
+                bossCurrentVelocityX = 0.0f;
+   bossCurrentVelocityY = 0.0f;
+   
+       // Store spawn position if not already stored
+     if (bossSpawnPosition.getX() == 0.0f && bossSpawnPosition.getY() == 0.0f)
+    {
+              bossSpawnPosition = position;
+  }
+  
+                LOG("CTHULHU STARTS FLYING - COLLISIONS DISABLED");
+      }
+       
+    // Increase flying timer
+            flyingTimer += dtSec;
+     
+            // Find player position
+     Vector2D playerPos = Vector2D((float)bx, (float)by);
+            bool foundPlayer = false;
+     for (const auto& entPtr : Engine::GetInstance().entityManager->entities)
+            {
+     if (entPtr && entPtr->type == EntityType::PLAYER)
+   {
+          playerPos = entPtr->position;
+     foundPlayer = true;
+          break;
+         }
+      }
+
+       // Calculate target position: always above the player, maintain horizontal distance
+            Vector2D targetPos;
+      if (foundPlayer)
+       {
+        // Boss always stays above player (160 pixels above)
+        // Horizontal position oscillates left/right using sine wave
+         float horizontalOffset = sinf(flyingTimer * 2.0f) * 80.0f;  // -80 to +80 pixels side-to-side
+   
+          targetPos.setX(playerPos.getX() + horizontalOffset);
+       targetPos.setY(playerPos.getY() - 160.0f);  // Always 160 pixels above
+            }
+            else
+      {
+     // No player found, fly upward from current position
+         targetPos.setX((float)bx);
+         targetPos.setY((float)by - 160.0f);
+     }
+
+    // Calculate desired direction and velocity
+        Vector2D directionToTarget;
+        directionToTarget.setX(targetPos.getX() - bx);
+     directionToTarget.setY(targetPos.getY() - by);
+ 
+            float distToTarget = sqrtf(directionToTarget.getX() * directionToTarget.getX() + 
+       directionToTarget.getY() * directionToTarget.getY());
+      
+            if (distToTarget > 0.1f)
+   {
+   // Normalize direction
+     directionToTarget.setX(directionToTarget.getX() / distToTarget);
+   directionToTarget.setY(directionToTarget.getY() / distToTarget);
+    
+                // Calculate desired velocity (accelerate toward target)
+         float desiredSpeedX = directionToTarget.getX() * bossMaxFlightSpeed;
+   float desiredSpeedY = directionToTarget.getY() * bossMaxFlightSpeed;
+
+          // Smooth acceleration toward desired velocity
+      float accelAmount = bossFlightAcceleration * dtSec;
+      
+  // Accelerate X
+         if (bossCurrentVelocityX < desiredSpeedX)
+      {
+       bossCurrentVelocityX = fminf(bossCurrentVelocityX + accelAmount, desiredSpeedX);
+           }
+   else if (bossCurrentVelocityX > desiredSpeedX)
+             {
+    bossCurrentVelocityX = fmaxf(bossCurrentVelocityX - accelAmount, desiredSpeedX);
+     }
+            
+         // Accelerate Y
+           if (bossCurrentVelocityY < desiredSpeedY)
+  {
+            bossCurrentVelocityY = fminf(bossCurrentVelocityY + accelAmount, desiredSpeedY);
+      }
+      else if (bossCurrentVelocityY > desiredSpeedY)
+    {
+         bossCurrentVelocityY = fmaxf(bossCurrentVelocityY - accelAmount, desiredSpeedY);
+        }
+         }
+    else
+            {
+           // Very close to target, decelerate to stop
+       float decelAmount = bossFlightAcceleration * dtSec * 0.5f;
+
+      if (fabs(bossCurrentVelocityX) > 0.1f)
+   {
+   bossCurrentVelocityX *= (1.0f - decelAmount * dtSec);
+          }
+     else
+      {
+   bossCurrentVelocityX = 0.0f;
+       }
+   
+         if (fabs(bossCurrentVelocityY) > 0.1f)
+                {
+     bossCurrentVelocityY *= (1.0f - decelAmount * dtSec);
+ }
+       else
+       {
+     bossCurrentVelocityY = 0.0f;
+         }
+       }
+        
+            // Apply smoothed velocity to boss
+      Engine::GetInstance().physics->SetLinearVelocity(pbody, bossCurrentVelocityX, bossCurrentVelocityY);
+         
+ // Check if flight duration is finished
+            if (flyingTimer >= flyingDuration)
+            {
+     LOG("CTHULHU FLIGHT FINISHED - ATTEMPTING LANDING");
+  
+ // Recreate as DYNAMIC body with collisions restored
+     int bx_land = (int)position.getX();
+       int by_land = (int)position.getY();
+      
+      Engine::GetInstance().physics->DeletePhysBody(pbody);
+  pbody = Engine::GetInstance().physics->CreateRectangle(
+        bx_land, by_land,
+      bossWidth,
+   bossHeight,
+        DYNAMIC  // Back to dynamic for collisions
+                );
+           pbody->ctype = ColliderType::ENEMY;
+       pbody->listener = shared_from_this();
+                b2Body_SetFixedRotation(pbody->body, true);
+      
+     // Restore gravity
+          b2Body_SetGravityScale(pbody->body, 1.0f);
+ 
+          // Reset velocity for smooth landing
+   bossCurrentVelocityX = 0.0f;
+       bossCurrentVelocityY = 0.0f;
+    
+            // Try to find ground below current position
+      int rayStartX = bx_land;
+         int rayStartY = by_land;
+            int rayEndX = bx_land;
+                int rayEndY = by_land + 1000;  // raycast downward for up to 1000 pixels
+    
+    float normalX = 0.0f, normalY = 0.0f;
+  int hitDistance = pbody->RayCast(rayStartX, rayStartY, rayEndX, rayEndY, normalX, normalY);
+    
+             if (hitDistance >= 0 && hitDistance < 1000)
+   {
+     // Found ground! Land safely
+    int safeY = rayStartY + hitDistance - 10;  // buffer of 10 pixels
+              pbody->SetPosition(rayStartX, safeY);
+       position.setX((float)rayStartX);
+      position.setY((float)safeY);
+     
+      // Apply small downward velocity to make landing natural
+    Engine::GetInstance().physics->SetLinearVelocity(pbody, 0.0f, 1.0f);
+    
+         LOG("CTHULHU LANDED AT (%.0f, %.0f)", (float)rayStartX, (float)safeY);
+         }
+      else
+                {
+  // No ground found - spawn flying enemy and continue flying
+          LOG("CTHULHU NO GROUND FOUND - SPAWNING MINION AND FLYING AGAIN");
+
+         // Spawn a flying enemy at boss location
+       auto flyer = std::make_shared<Enemy>(bx_land, by_land - 50);
+      flyer->MakeFlying();
+    Engine::GetInstance().entityManager->AddEntity(flyer);
+           LOG("Flying minion spawned at (%.0f, %.0f)", (float)bx_land, (float)(by_land - 50));
+     
+               // Restart flight - convert back to kinematic
+         flyingTimer = 0.0f;
+            bossCurrentVelocityX = 0.0f;
+     bossCurrentVelocityY = 0.0f;
+  
+           Engine::GetInstance().physics->DeletePhysBody(pbody);
+           pbody = Engine::GetInstance().physics->CreateRectangle(
+   bx_land, by_land,
+  bossWidth,
+   bossHeight,
+       KINEMATIC
+          );
+         pbody->ctype = ColliderType::ENEMY;
+    pbody->listener = shared_from_this();
+       b2Body_SetFixedRotation(pbody->body, true);
+b2Body_SetGravityScale(pbody->body, 0.0f);
+         
+       LOG("CTHULHU FLIGHT RESTARTED");
+       }
+     
+          // Reset flying state and return to combat after landing attempt
+    bossState = BossState::COMBAT;
+         stateTimer = 0.0f;
+  stateTransitionTime = 0.0f;
+flyingInitialized = false;  // Reset for next flight
             }
         }
 
@@ -1005,6 +1322,10 @@ void Enemy::MakeBoss()
 		bx = (int)position.getX();
 		by = (int)position.getY();
 	}
+
+	// Store spawn position for flying fallback
+	bossSpawnPosition.setX((float)bx);
+	bossSpawnPosition.setY((float)by);
 
 	// Create boss as a regular body that collides with ground but not other enemies
 	// Use CreateRectangle (not sensor) so it respects gravity and collides with platforms
