@@ -26,6 +26,8 @@ private:
     SDL_Texture* texture = nullptr;
     PhysBody* pbody = nullptr;
     AnimationSet anims;
+    
+	bool picked = false;
 
     int texW = 32;
     int texH = 32;

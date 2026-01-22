@@ -392,3 +392,92 @@ bool Render::DrawCircle(int x, int y, int radius, Uint8 r, Uint8 g, Uint8 b, Uin
 
 	return ret;
 }
+
+bool Render::DrawText(const char* text, int x, int y, SDL_Color color, bool useCamera) const
+{
+	if (text == nullptr || text[0] == '\0') return true;
+
+	int scale = Engine::GetInstance().window->GetScale();
+
+	// Color del texto (SDL_RenderDebugText usa el color actual del renderer)
+	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+
+	float X = 0.0f;
+	float Y = 0.0f;
+
+	if (useCamera)
+	{
+		X = (float)(camera.x + x * scale);
+		Y = (float)(camera.y + y * scale);
+	}
+	else
+	{
+		X = (float)(x * scale);
+		Y = (float)(y * scale);
+	}
+
+	// Texto debug de SDL3 (perfecto para contadores simples)
+	bool ok = SDL_RenderDebugText(renderer, X, Y, text);
+	if (!ok)
+	{
+		LOG("SDL_RenderDebugText error: %s", SDL_GetError());
+	}
+	return ok;
+}
+
+bool Render::DrawTextureScaled(SDL_Texture* texture, int x, int y, const SDL_Rect* section, float scaleFactor, bool useCamera) const
+{
+	if (texture == nullptr) return false;
+
+	int scale = Engine::GetInstance().window->GetScale();
+
+	// --- Convert SRC rect to SDL_FRect (SDL3 expects floats) ---
+	SDL_FRect srcF;
+	SDL_FRect* pSrc = nullptr;
+
+	int w = 0, h = 0;
+
+	if (section != nullptr)
+	{
+		srcF.x = (float)section->x;
+		srcF.y = (float)section->y;
+		srcF.w = (float)section->w;
+		srcF.h = (float)section->h;
+		pSrc = &srcF;
+
+		w = section->w;
+		h = section->h;
+	}
+	else
+	{
+		// If no section, we need texture size to build dst w/h
+		float tw = 0.0f, th = 0.0f;
+		SDL_GetTextureSize(texture, &tw, &th);
+		w = (int)tw;
+		h = (int)th;
+	}
+
+	// --- DEST rect in screen coords ---
+	float drawX = 0.0f;
+	float drawY = 0.0f;
+
+	if (useCamera)
+	{
+		drawX = (float)(camera.x + x * scale);
+		drawY = (float)(camera.y + y * scale);
+	}
+	else
+	{
+		drawX = (float)(x * scale);
+		drawY = (float)(y * scale);
+	}
+
+	SDL_FRect dstF;
+	dstF.x = drawX;
+	dstF.y = drawY;
+	dstF.w = (float)(w * scale * scaleFactor);
+	dstF.h = (float)(h * scale * scaleFactor);
+
+	return SDL_RenderTexture(renderer, texture, pSrc, &dstF);
+}

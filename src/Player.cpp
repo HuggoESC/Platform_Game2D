@@ -44,6 +44,9 @@ bool Player::Start() {
 	// Initialize Player parameters 
 	texture = Engine::GetInstance().textures->Load("Assets/Textures/satiro-Sheet v1.1.png");
 	lifeTexture = Engine::GetInstance().textures->Load("Assets/Textures/Vida.png");
+	gemHudTexture = Engine::GetInstance().textures->Load(
+		"Assets/Textures/gem_round_32x32_12f_0d.png"
+	);
 	Engine::GetInstance().textures->GetSize(lifeTexture, lifeTexW, lifeTexH);
 
 	std::unordered_map<int, std::string> lifeAliases = {
@@ -566,6 +569,31 @@ void Player::Draw(float dt) {
 			);
 		}
 
+		int gemsX = baseX;
+		int gemsY = baseY + 34; // debajo de los corazones
+
+		SDL_Rect gemFrame = { 0, 0, 32, 32 };
+
+		if (gemHudTexture)
+		{
+			Engine::GetInstance().render->DrawTextureScaled(
+				gemHudTexture,
+				gemsX,
+				gemsY,
+				&gemFrame,
+				0.6f,   
+				true    
+			);
+		}
+
+		Engine::GetInstance().render->DrawText(
+			std::to_string(gemsCollected).c_str(),
+			gemsX + 40,
+			gemsY + 6,
+			{ 255, 255, 255, 255 },
+			true  
+		);
+
 		// Draw dagger indicator if picked up
 		if (canAttack && daggerUITexture)
 		{
@@ -650,17 +678,16 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 
 	case ColliderType::GEM:
 	{
-		LOG("Collision GEM");
-		Engine::GetInstance().audio->PlayFx(pickGemFxId);
-
 		auto pickup = physB ? physB->listener.lock() : std::shared_ptr<Entity>();
-		if (physB) physB->listener.reset();
+		if (physB) physB->listener.reset(); // evita dobles eventos
 
 		if (pickup && pickup->active)
 		{
+			Engine::GetInstance().audio->PlayFx(pickGemFxId);
 			pickup->Destroy();
 			gemsCollected++;
 		}
+
 		break;
 	}
 

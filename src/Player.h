@@ -82,6 +82,7 @@ private:
 
 	// Hud life animation
 	SDL_Texture* lifeTexture = nullptr;
+	SDL_Texture* gemHudTexture = nullptr;
 	AnimationSet lifeAnims;
 	int lifeTexW = 0;
 	int lifeTexH = 0;

@@ -72,7 +72,6 @@ bool Gem::Update(float dt)
 
 void Gem::OnCollision(PhysBody* physA, PhysBody* physB)
 {
-    // The main pickup logic is handled in Player::OnCollision
     if (physB && physB->ctype == ColliderType::PLAYER)
     {
         LOG("Gem touched by player");
@@ -98,18 +97,20 @@ bool Gem::CleanUp()
 
 bool Gem::Destroy()
 {
-    LOG("Destroying Gem");
+    if (picked) return true;
+    picked = true;
 
-    if (!active) return true;
+    LOG("Destroying Gem");
 
     active = false;
 
     if (pbody)
     {
-        pbody->listener.reset();
-        pbody->pendingDelete = true;
+        pbody->ctype = ColliderType::UNKNOWN;              
+        pbody->pendingDelete = true;         
     }
 
+    // Sacarla del EntityManager
     Engine::GetInstance().entityManager->DestroyEntity(shared_from_this());
     return true;
 }
