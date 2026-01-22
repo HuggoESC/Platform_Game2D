@@ -60,6 +60,10 @@ bool Map::Update(float dt)
         // iterar todas las capas del mapa
         for (const auto& mapLayer : mapData.layers) {
 
+            // NUNCA dibujar la capa de colisiones
+            if (mapLayer->name == "Collisions")
+                continue;
+
             Properties::Property* drawProp = mapLayer->properties.GetProperty("Draw");
 
             // si no hay propiedad "Draw", o es true ? dibuja
