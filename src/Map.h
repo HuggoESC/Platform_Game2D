@@ -102,6 +102,9 @@ public:
 
 	float GetRenderScale() const { return renderScale; }
 
+    bool HasPlayerSpawn() const { return hasPlayerSpawn; }
+    Vector2D GetPlayerSpawn() const { return playerSpawn; }
+
     virtual ~Map();
 
     bool Awake();
@@ -139,6 +142,9 @@ private:
 	float renderScale = 1.0f;
 
     void UnloadMapData();
+
+    bool hasPlayerSpawn = false;
+    Vector2D playerSpawn = Vector2D(0, 0);
 
     std::vector<PhysBody*> mapColliders;
 

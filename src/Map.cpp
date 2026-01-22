@@ -172,6 +172,8 @@ bool Map::CleanUp()
 // Load new map
 bool Map::Load(std::string path, std::string fileName)
 {
+    hasPlayerSpawn = false;
+    playerSpawn = Vector2D(0, 0);
     bool ret = false;
 
     // Si ya hay un mapa cargado, lo descargamos antes de cargar otro
@@ -399,31 +401,80 @@ bool Map::Load(std::string path, std::string fileName)
         {
             std::string layerName = objGroup.attribute("name").as_string();
 
-            // ---------- ENTITIES ----------
             if (layerName == "Entities")
             {
                 for (pugi::xml_node object = objGroup.child("object");
                     object;
                     object = object.next_sibling("object"))
                 {
-                    std::string name = object.attribute("name").as_string();
+                    // Tiled puede identificar objetos por:
+                    // - name="..."
+                    // - type="..." (viejo)
+                    // - class="..." (nuevo, Tiled moderno)
+                    std::string objName = object.attribute("name").as_string();
+                    std::string objType = object.attribute("type").as_string();
+                    std::string objClass = object.attribute("class").as_string();
+
                     int x = (int)(object.attribute("x").as_int() * renderScale);
                     int y = (int)(object.attribute("y").as_int() * renderScale);
+                    int w = (int)(object.attribute("width").as_int() * renderScale);
+                    int h = (int)(object.attribute("height").as_int() * renderScale);
 
-                    if (name == "Slime")
+                    // ID principal: si tiene name, úsalo; si no, cae a class/type
+                    std::string id = !objName.empty() ? objName : (!objClass.empty() ? objClass : objType);
+
+                    // ---------------- PLAYER SPAWN ----------------
+                    // Queremos: Name="Player" y Class="Player" (pero aceptamos cualquiera de los dos)
+                    bool isPlayerSpawn =
+                        (id == "Player") ||
+                        (objName == "Player") ||
+                        (objClass == "Player") ||
+                        (objType == "Player");
+
+                    if (isPlayerSpawn)
+                    {
+                        // Como es un rectángulo, usamos su centro
+                        int sx = x + (w > 0 ? w / 2 : 0);
+                        int sy = y + (h > 0 ? h / 2 : 0);
+
+                        // Offset opcional desde Tiled: propiedad "offsetY" (por si quieres subirlo)
+                        int offsetY = 0;
+                        pugi::xml_node props = object.child("properties");
+                        for (pugi::xml_node p = props.child("property"); p; p = p.next_sibling("property"))
+                        {
+                            std::string pname = p.attribute("name").as_string();
+                            if (pname == "offsetY")
+                            {
+                                offsetY = (int)(p.attribute("value").as_int() * renderScale);
+                                break;
+                            }
+                        }
+                        sy += offsetY;
+
+                        playerSpawn = Vector2D((float)sx, (float)sy);
+                        hasPlayerSpawn = true;
+
+                        LOG("PLAYER SPAWN encontrado: (%d,%d) [name='%s' class='%s' type='%s']",
+                            sx, sy, objName.c_str(), objClass.c_str(), objType.c_str());
+
+                        continue;
+                    }
+
+                    // ---------------- RESTO ENTITIES ----------------
+                    if (id == "Slime")
                     {
                         auto e = Engine::GetInstance().entityManager->CreateEntity(EntityType::ENEMY);
                         auto slime = std::dynamic_pointer_cast<Enemy>(e);
                         if (slime) slime->SetPosition(x, y);
                     }
-                    else if (name == "hoguera")
+                    else if (id == "hoguera")
                     {
                         auto h = std::make_shared<hoguera>(x, y);
                         Engine::GetInstance().entityManager->AddEntity(h);
                         h->Awake();
                         h->Start();
                     }
-                    else if (name == "LifeUP")
+                    else if (id == "LifeUP")
                     {
                         auto life = std::make_shared<LifeUP>(x, y);
                         Engine::GetInstance().entityManager->AddEntity(life);

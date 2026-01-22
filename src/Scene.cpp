@@ -124,11 +124,11 @@ bool Scene::Update(float dt)
 	{
 		pendingLevelChange = false;
 
-		// Setear spawn antes de LoadLevel (LoadLevel usa player->spawnPosition)
+		comingFromLevelTransition = true;
+
 		if (player)
 			player->spawnPosition = pendingSpawn;
 
-		// evita eventos raros al teletransportar y recrear cosas
 		Engine::GetInstance().physics->ignoreContactSteps = 2;
 
 		LoadLevel(pendingNextLevel);
@@ -696,6 +696,15 @@ void Scene::LoadLevel(int level)
 	// 2) Cargar mapa según nivel
 	const char* mapFile = (level == 2) ? MAP_LEVEL2 : MAP_LEVEL1;
 	Engine::GetInstance().map->Load("Assets/Maps/", mapFile);
+
+	// Si entramos desde menú (o carga normal), usamos el spawn del TMX
+	if (!comingFromLevelTransition && Engine::GetInstance().map->HasPlayerSpawn())
+	{
+		player->spawnPosition = Engine::GetInstance().map->GetPlayerSpawn();
+	}
+
+	// Consumimos el flag
+	comingFromLevelTransition = false;
 
 	// --- SPAWN DEBUG: enemigo volador fijo ---
 	auto e = Engine::GetInstance().entityManager->CreateEntity(EntityType::ENEMY);

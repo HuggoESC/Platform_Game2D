@@ -132,6 +132,7 @@ private:
 	bool gameOverActive = false;
 	float gameOverTimer = 0.0f;
 
+	bool comingFromLevelTransition = false;	
 	bool pendingLevelChange = false;
 	int pendingNextLevel = 1;
 	Vector2D pendingSpawn = Vector2D(96, 650);
