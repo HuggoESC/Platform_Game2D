@@ -79,6 +79,7 @@ bool Player::Start() {
 
 	// initialize audio effect
 	pickCoinFxId = Engine::GetInstance().audio->LoadFx("Assets/Audio/Fx/coin-collision-sound-342335.wav");
+	pickGemFxId = Engine::GetInstance().audio->LoadFx("Assets/Audio/Fx/retro-coin-1-236677.wav");
 	pickliveFxId = Engine::GetInstance().audio->LoadFx("Assets/Audio/Fx/life_pickup.wav");
 
 	return true;
@@ -644,6 +645,22 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 
 		// enable attack when picking the dagger
 		canAttack = true;
+		break;
+	}
+
+	case ColliderType::GEM:
+	{
+		LOG("Collision GEM");
+		Engine::GetInstance().audio->PlayFx(pickGemFxId);
+
+		auto pickup = physB ? physB->listener.lock() : std::shared_ptr<Entity>();
+		if (physB) physB->listener.reset();
+
+		if (pickup && pickup->active)
+		{
+			pickup->Destroy();
+			gemsCollected++;
+		}
 		break;
 	}
 

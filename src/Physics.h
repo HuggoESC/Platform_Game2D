@@ -36,6 +36,7 @@ enum class ColliderType {
     TOPE,
     BLUE_BLOCK,
     LIFEUP,
+    GEM,
 	MAPCHANGE
     
 };

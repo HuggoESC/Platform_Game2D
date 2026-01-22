@@ -96,6 +96,9 @@
     <ClCompile Include="src\MapChangeTrigger.cpp">
       <Filter>Source Files\Game</Filter>
     </ClCompile>
+    <ClCompile Include="src\Gem.cpp">
+      <Filter>Source Files\Engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Audio.h">
@@ -166,6 +169,9 @@
     </ClInclude>
     <ClInclude Include="src\MapChangeTrigger.h">
       <Filter>Source Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Gem.h">
+      <Filter>Source Files\Engine</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

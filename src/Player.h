@@ -46,6 +46,9 @@ public:
 	// Audio fx
 	int pickCoinFxId;
 	int pickliveFxId;
+	int pickGemFxId;	
+
+	int gemsCollected = 0;
 
 	// Add physics to the player - declare a Physics body
 	PhysBody* pbody;

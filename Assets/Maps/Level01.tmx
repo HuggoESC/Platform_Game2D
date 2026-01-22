@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="64" height="24" tilewidth="32" tileheight="32" infinite="0" nextlayerid="17" nextobjectid="14">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="64" height="24" tilewidth="32" tileheight="32" infinite="0" nextlayerid="17" nextobjectid="23">
  <tileset firstgid="1" name="Ground" tilewidth="32" tileheight="32" tilecount="165" columns="15">
   <image source="Tilesets/Ground.png" width="504" height="360"/>
  </tileset>
@@ -1574,7 +1574,16 @@
   <object id="10" name="LifeUP" type="LifeUP" x="1406.67" y="384" width="29.3333" height="33.3333"/>
   <object id="11" name="LifeUP" type="LifeUP" x="961.333" y="64.6667" width="29.3333" height="33.3333"/>
   <object id="1" name="Player" type="Player" x="64" y="641.333" width="32" height="32"/>
-  <object id="13" name="Gem" type="Gem" x="193.245" y="639.869" width="32" height="30.6667" rotation="267.962"/>
+  <object id="13" name="Gem" type="Gem" x="194.579" y="610.535" width="32" height="30.6667" rotation="267.962"/>
+  <object id="14" name="Gem" type="Gem" x="258.667" y="576.667" width="32" height="30.6667" rotation="267.962"/>
+  <object id="15" name="Gem" type="Gem" x="352" y="543.333" width="32" height="30.6667" rotation="267.962"/>
+  <object id="16" name="Gem" type="Gem" x="512" y="64.6667" width="32" height="30.6667" rotation="267.962"/>
+  <object id="17" name="Gem" type="Gem" x="688" y="288.667" width="32" height="30.6667" rotation="267.962"/>
+  <object id="18" name="Gem" type="Gem" x="722.667" y="63.3333" width="32" height="30.6667" rotation="267.962"/>
+  <object id="19" name="Gem" type="Gem" x="977.333" y="674" width="32" height="30.6667" rotation="267.962"/>
+  <object id="20" name="Gem" type="Gem" x="1186.67" y="288.667" width="32" height="30.6667" rotation="267.962"/>
+  <object id="21" name="Gem" type="Gem" x="1517.33" y="95.3333" width="32" height="30.6667" rotation="267.962"/>
+  <object id="22" name="Gem" type="Gem" x="1696" y="574" width="32" height="30.6667" rotation="267.962"/>
  </objectgroup>
  <layer id="13" name="Fondo" width="64" height="24">
   <data>

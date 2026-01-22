@@ -10,7 +10,8 @@ enum class EntityType
 	UNKNOWN,
 	ENEMY,
 	HOGUERA,
-	LIFEUP
+	LIFEUP,
+	GEM
 };
 
 class PhysBody;

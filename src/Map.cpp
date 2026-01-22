@@ -8,6 +8,7 @@
 #include "Enemy.h"
 #include "hoguera.h"
 #include "LifeUP.h"
+#include "Gem.h"
 #include "MapChangeTrigger.h"
 #include <math.h>
 #include <algorithm>
@@ -480,6 +481,13 @@ bool Map::Load(std::string path, std::string fileName)
                         Engine::GetInstance().entityManager->AddEntity(life);
                         life->Awake();
                         life->Start();
+                    }
+                    else if (id == "Gem")
+                    {
+                        auto gem = std::make_shared<Gem>(x, y);
+                        Engine::GetInstance().entityManager->AddEntity(gem);
+                        gem->Awake();
+                        gem->Start();
                     }
                 }
             }
