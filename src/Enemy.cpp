@@ -177,6 +177,16 @@ bool Enemy::Update(float dt)
         const float dtSec = dt / 1000.0f;
         static bool facingLeft = true;
 
+        // Update slowdown timer
+        if (isSlowedDown)
+        {
+            slowdownTimer -= dtSec;
+            if (slowdownTimer <= 0.0f)
+            {
+                isSlowedDown = false;
+            }
+        }
+
         // Tiempo para bob y animación (solo 1 vez por frame)
         flyTime += dtSec;
 
@@ -243,7 +253,13 @@ bool Enemy::Update(float dt)
                 // OJO: velocidades de Box2D están en METROS/SEG.
                 // Tu flySpeed actual (80) era enorme si lo interpretamos como m/s.
                 // Vamos a usar una velocidad razonable (2.5 m/s ~ 125 px/s).
-                const float chaseSpeed = 3.5f;
+                float chaseSpeed = 3.5f;
+                
+                // Apply slowdown multiplier if slowed down
+                if (isSlowedDown)
+                {
+                    chaseSpeed *= -slowdownMultiplier;
+                }
 
                 vx = nx * chaseSpeed;
 
@@ -452,6 +468,14 @@ void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
  isMovingRandom = false; // cancel random move on collision
  patrolFlipTimer = patrolFlipCooldown; // avoid immediate flip back
  LOG("SLIME: cambio de dirección");
+ }
+
+ // Flying enemy collision with player - slow down for 2 seconds
+ if (kind == EnemyKind::FLYING && physA == pbody && physB->ctype == ColliderType::PLAYER)
+ {
+ isSlowedDown = true;
+ slowdownTimer = slowdownDuration;
+ LOG("FLYING ENEMY: Slowed down after hitting player!");
  }
 }
 
