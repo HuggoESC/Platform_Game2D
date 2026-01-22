@@ -738,6 +738,12 @@ void Scene::LoadLevel(int level)
 			LOG("Spawned Dagger at 416, 450");
 		}
 	}
+	// --- Automatically have dagger at Level 2 ---
+	else if (level == 2)
+	{
+		player->canAttack = true;
+		LOG("Level 2: Player starts with dagger ability enabled");
+	}
 
 	// 3) Reset jugador a spawn
 	Vector2D spawn = player->spawnPosition;
