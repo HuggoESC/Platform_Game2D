@@ -184,15 +184,19 @@ bool Enemy::Update(float dt)
         int px, py;
         pbody->GetPosition(px, py);
 
+        // Actualizar position con los valores del pbody para que el hitbox se sincronice
+        position.setX((float)px);
+        position.setY((float)py);
+
         const b2Vec2 posM = b2Body_GetPosition(pbody->body);
         float xM = posM.x;
         float yM = posM.y;
 
-        // Si por lo que sea flyBaseY está a 0 (poco probable), lo inicializamos (EN METROS)
-        if (flyBaseY == 0.0f)
+        // Si por lo que sea flyBaseY está a 0 o no inicializado, lo inicializamos (EN METROS)
+        if (flyBaseY == 0.0f || flyBaseY < 0.1f)
             flyBaseY = yM;
 
-        // Bob en Y (flyBobAmp está en PIXELES -> lo convertimos a METROS)
+        // Bob en Y (flyBobAmp está en PÍXELES -> lo convertimos a METROS)
         const float bobM = PIXEL_TO_METERS(flyBobAmp) * sinf(flyTime * flyBobFreq);
         const float targetYM = flyBaseY + bobM;
 
@@ -205,7 +209,7 @@ bool Enemy::Update(float dt)
         {
             if (entPtr && entPtr->type == EntityType::PLAYER)
             {
-                // entPtr->position está en PIXELES -> convertimos a METROS
+                // entPtr->position está en PÍXELES -> convertimos a METROS
                 playerXM = PIXEL_TO_METERS(entPtr->position.getX());
                 playerYM = PIXEL_TO_METERS(entPtr->position.getY());
                 hasPlayer = true;
@@ -220,10 +224,10 @@ bool Enemy::Update(float dt)
         // Si hay jugador, perseguir si está en rango
         if (hasPlayer)
         {
-            // flyAggroRange está en PIXELES -> a METROS
+            // flyAggroRange está en PÍXELES -> a METROS
             const float aggroRangeM = PIXEL_TO_METERS(500.0f);
 
-            // Queremos apuntar un poco por encima del jugador para que no “choque raro”
+            // Queremos apuntar un poco por encima del jugador para que no "choque raro"
             const float aimOffsetY = PIXEL_TO_METERS(20.0f);
 
             float dx = playerXM - xM;
@@ -248,17 +252,22 @@ bool Enemy::Update(float dt)
                     facingLeft = (vx < 0.0f);
 				}
 
-                // Mezclamos persecución con el bob para que no “tiemble”
-                float chaseVy = ny * chaseSpeed;
-                float bobVy = (targetYM - yM) * 2.0f;
-                vy = chaseVy + bobVy;
+                // Perseguir al jugador en Y sin restricciones de bob
+                vy = ny * chaseSpeed;
 
                 currentFlyAnim = &flyAnim;       // si no tienes frames de flyAnim, puedes dejar idle
             }
             else
             {
+                // Volver a hovering cuando sale del rango
+                vy = (targetYM - yM) * 3.0f;
                 currentFlyAnim = &flyIdleAnim;
             }
+        }
+        else
+        {
+            // Sin jugador: hovering normal
+            currentFlyAnim = &flyIdleAnim;
         }
 
         // Aplicar velocidad REAL al body (en vez de SetPosition cada frame)
@@ -572,11 +581,11 @@ void Enemy::MakeFlying(int frameW, int frameH)
     b2Body_SetGravityScale(pbody->body, 0.0f);
     Engine::GetInstance().physics->SetYVelocity(pbody, 0.0f);
 
-    // Base Y para el bob
+    // Base Y para el bob - inicializar a la posición actual del cuerpo
     b2Vec2 p = b2Body_GetPosition(pbody->body);
-    flyBaseY = p.y; // EN METROS
+    flyBaseY = p.y; // EN METROS - usar la posición actual como base
 
-    LOG("Enemy convertido a FLYING con %d frames", (int)flyIdleAnim.frames.size());
+    LOG("Enemy convertido a FLYING con %d frames, flyBaseY initialized to %.2f meters", (int)flyIdleAnim.frames.size(), flyBaseY);
 }
 
 bool Enemy::CleanUp()
