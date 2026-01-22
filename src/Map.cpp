@@ -81,11 +81,12 @@ bool Map::Update(float dt)
                                 SDL_Rect tileRect = tileSet->GetRect(gid);
                                 Vector2D mapCoord = MapToWorld(i, j);
 
-                                Engine::GetInstance().render->DrawTexture(
+                                Engine::GetInstance().render->DrawTextureScaled(
                                     tileSet->texture,
                                     (int)mapCoord.getX(),
                                     (int)mapCoord.getY(),
-                                    &tileRect
+                                    &tileRect,
+                                    renderScale
                                 );
                             }
                         }
@@ -200,6 +201,13 @@ bool Map::Load(std::string path, std::string fileName)
         mapData.height = mapFileXML.child("map").attribute("height").as_int();
         mapData.tileWidth = mapFileXML.child("map").attribute("tilewidth").as_int();
         mapData.tileHeight = mapFileXML.child("map").attribute("tileheight").as_int();
+
+        renderScale = 32.0f / (float)mapData.tileWidth;
+
+        // Seguridad
+        if (renderScale <= 0.0f) renderScale = 1.0f;
+
+        LOG("Map renderScale = %.2f (tileWidth=%d)", renderScale, mapData.tileWidth);
 
         // Implement the LoadTileSet function to load the tileset properties
         //Iterate the Tileset
@@ -331,10 +339,14 @@ bool Map::Load(std::string path, std::string fileName)
                         Vector2D pos = MapToWorld(i, j);
 
                         // Creamos collider físico
+// tamaño de tile en “mundo” (32 siempre)
+                        int worldTileW = (int)(mapData.tileWidth * renderScale);
+                        int worldTileH = (int)(mapData.tileHeight * renderScale);
+
                         PhysBody* c = Engine::GetInstance().physics->CreateRectangle(
-                            pos.getX() + mapData.tileWidth / 2,
-                            pos.getY() + mapData.tileHeight / 2,
-                            mapData.tileWidth, mapData.tileHeight,
+                            (int)pos.getX() + worldTileW / 2,
+                            (int)pos.getY() + worldTileH / 2,
+                            worldTileW, worldTileH,
                             STATIC);
 						mapColliders.push_back(c);
 
@@ -395,8 +407,8 @@ bool Map::Load(std::string path, std::string fileName)
                     object = object.next_sibling("object"))
                 {
                     std::string name = object.attribute("name").as_string();
-                    int x = object.attribute("x").as_int();
-                    int y = object.attribute("y").as_int();
+                    int x = (int)(object.attribute("x").as_int() * renderScale);
+                    int y = (int)(object.attribute("y").as_int() * renderScale);
 
                     if (name == "Slime")
                     {
@@ -428,10 +440,10 @@ bool Map::Load(std::string path, std::string fileName)
                     obj;
                     obj = obj.next_sibling("object"))
                 {
-                    int ox = obj.attribute("x").as_int();
-                    int oy = obj.attribute("y").as_int();
-                    int ow = obj.attribute("width").as_int();
-                    int oh = obj.attribute("height").as_int();
+                    int ox = (int)(obj.attribute("x").as_int() * renderScale);
+                    int oy = (int)(obj.attribute("y").as_int() * renderScale);
+                    int ow = (int)(obj.attribute("width").as_int() * renderScale);
+                    int oh = (int)(obj.attribute("height").as_int() * renderScale);
 
                     int targetLevel = 2;
                     int spawnX = 96;
@@ -447,6 +459,9 @@ bool Map::Load(std::string path, std::string fileName)
                         else if (pname == "spawnX") spawnX = atoi(pvalue.c_str());
                         else if (pname == "spawnY") spawnY = atoi(pvalue.c_str());
                     }
+
+                    spawnX = (int)(spawnX * renderScale);
+                    spawnY = (int)(spawnY * renderScale);
 
                     auto trigger = std::make_shared<MapChangeTrigger>(ox, oy, ow, oh, targetLevel, spawnX, spawnY);
                     Engine::GetInstance().entityManager->AddEntity(trigger);
@@ -497,8 +512,12 @@ Vector2D Map::MapToWorld(int i, int j) const
 {
     Vector2D ret;
 
-    ret.setX((float)(j * mapData.tileWidth));
-    ret.setY((float)(i * mapData.tileHeight));
+    // Convertimos el grid del mapa a un “mundo” de tiles 32x32
+    float worldX = (float)(j * mapData.tileWidth) * renderScale;
+    float worldY = (float)(i * mapData.tileHeight) * renderScale;
+
+    ret.setX(worldX);
+    ret.setY(worldY);
 
     return ret;
 }
@@ -524,8 +543,8 @@ bool Map::LoadProperties(pugi::xml_node& node, Properties& properties)
 Vector2D Map::GetMapSizeInPixels()
 {
     Vector2D sizeInPixels;
-    sizeInPixels.setX((float)(mapData.width * mapData.tileWidth));
-    sizeInPixels.setY((float)(mapData.height * mapData.tileHeight));
+    sizeInPixels.setX((float)(mapData.width * mapData.tileWidth) * renderScale);
+    sizeInPixels.setY((float)(mapData.height * mapData.tileHeight) * renderScale);
     return sizeInPixels;
 }
 
@@ -536,8 +555,11 @@ void Map::WorldToMap(int x, int y, int& row, int& col) const
         return;
     }
 
-    col = x / mapData.tileWidth;
-    row = y / mapData.tileHeight;
+    float worldTileW = (float)mapData.tileWidth * renderScale;
+    float worldTileH = (float)mapData.tileHeight * renderScale;
+
+    col = (int)(x / worldTileW);
+    row = (int)(y / worldTileH);
 
     // clamp
     if (col < 0) col = 0;

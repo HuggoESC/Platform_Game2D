@@ -100,6 +100,8 @@ public:
 
     Map();
 
+	float GetRenderScale() const { return renderScale; }
+
     virtual ~Map();
 
     bool Awake();
@@ -133,6 +135,8 @@ public:
     std::string mapPath;
 
 private:
+
+	float renderScale = 1.0f;
 
     void UnloadMapData();
 

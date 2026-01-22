@@ -242,6 +242,52 @@ bool Render::DrawTexture(SDL_Texture* texture, int x, int y, const SDL_Rect* sec
 	return ret;
 }
 
+bool Render::DrawTextureScaled(SDL_Texture* texture, int x, int y, const SDL_Rect* section, float scale)
+{
+	if (texture == nullptr) return false;
+
+	SDL_FRect src;
+	SDL_FRect dst;
+
+	// SRC (SDL3 usa FRect). Convertimos desde SDL_Rect si hay section.
+	if (section != nullptr)
+	{
+		src.x = (float)section->x;
+		src.y = (float)section->y;
+		src.w = (float)section->w;
+		src.h = (float)section->h;
+
+		dst.w = (float)section->w * scale;
+		dst.h = (float)section->h * scale;
+	}
+	else
+	{
+		// Si no hay section, usamos tamaño completo de textura
+		float w = 0, h = 0;
+		SDL_GetTextureSize(texture, &w, &h);
+
+		src.x = 0;
+		src.y = 0;
+		src.w = w;
+		src.h = h;
+
+		dst.w = w * scale;
+		dst.h = h * scale;
+	}
+
+	// DST (posición + cámara)
+	dst.x = (float)(x + camera.x);
+	dst.y = (float)(y + camera.y);
+
+	if (SDL_RenderTexture(renderer, texture, &src, &dst) < 0)
+	{
+		LOG("SDL_RenderTexture error: %s", SDL_GetError());
+		return false;
+	}
+
+	return true;
+}
+
 
 bool Render::DrawRectangle(const SDL_Rect& rect, Uint8 r, Uint8 g, Uint8 b, Uint8 a, bool filled, bool use_camera) const
 {
