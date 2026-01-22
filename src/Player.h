@@ -49,8 +49,8 @@ public:
 
 	// Add physics to the player - declare a Physics body
 	PhysBody* pbody;
-	float jumpForce = 2.5f; // The force to apply when jumping
-	float dashForce = 50.0f; // The force to apply when dashing
+	float jumpForce = 2.0f; // The force to apply when jumping
+	float dashForce = 100.0f; // The force to apply when dashing
 	int jumpCount = 0; // Counter to track the number of jumps
 	bool isJumping = false; // Flag to check if the player is currently jumping
 	bool isDashing = false; // Flag to check if the player is currently dashing
@@ -83,6 +83,11 @@ private:
 	int lifeTexW = 0;
 	int lifeTexH = 0;
 
+	// Hud dagger indicator
+	SDL_Texture* daggerUITexture = nullptr;
+	int daggerUITexW = 0;
+	int daggerUITexH = 0;
+
 	// Dash state
 	float currentDashSpeed = 0.0f;    
     float maxDashSpeed = 10.0f;       
@@ -99,6 +104,10 @@ private:
 	float attackSpeed = 300.0f;  // pixels per second (tweakable)
 	int attackLength = 24;        // visual triangle length in pixels
 	int attackHalfWidth = 4;     // half base width in pixels
+
+	// Attack cooldown
+	float attackCooldown = 0.0f;
+	const float attackCooldownDuration = 1.0f; // 1.0 seconds
 
 	//Invencibility
 	bool invulnerable = false;

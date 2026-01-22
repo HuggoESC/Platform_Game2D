@@ -715,6 +715,21 @@ void Scene::LoadLevel(int level)
 		LOG("Spawned Flying Enemy at %d, %d", spawnX, spawnY);
 	}
 
+	// --- Spawn dagger at Level 1 ---
+	if (level == 1)
+	{
+		auto dagger = Engine::GetInstance().entityManager->CreateEntity(EntityType::ITEM);
+		auto item = std::dynamic_pointer_cast<Item>(dagger);
+
+		if (item)
+		{
+			item->position = Vector2D(416, 450);
+			item->Start();
+
+			LOG("Spawned Dagger at 416, 450");
+		}
+	}
+
 	// 3) Reset jugador a spawn
 	Vector2D spawn = player->spawnPosition;
 	if (spawn.getX() == 0 && spawn.getY() == 0)
@@ -1150,6 +1165,3 @@ bool Scene::CleanUp()
 
 	return true;
 }
-
-
-

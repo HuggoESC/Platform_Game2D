@@ -61,6 +61,10 @@ bool Player::Start() {
 	maxHp = 4;
 	UpdateLifeAnimation();
 
+	// Load dagger UI texture
+	daggerUITexture = Engine::GetInstance().textures->Load("Assets/Textures/Daga.png");
+	Engine::GetInstance().textures->GetSize(daggerUITexture, daggerUITexW, daggerUITexH);
+
 	// Add physics to the player - initialize physics body
 	texW =32;
 	texH =32;
@@ -110,6 +114,12 @@ bool Player::Update(float dt)
 				blinkTimer = blinkInterval;
 				blinkVisible = !blinkVisible;
 			}
+		}
+
+		// Update attack cooldown
+		if (attackCooldown > 0.0f)
+		{
+			attackCooldown -= dtSec;
 		}
 
 	// Muerte por caida (no afecta en GodMode)
@@ -365,6 +375,12 @@ void Player::Attack(float dt) {
 			return;
 		}
 
+		// Check if attack is on cooldown
+		if (attackCooldown > 0.0f) {
+			LOG("Attack on cooldown: %.2f seconds remaining", attackCooldown);
+			return;
+		}
+
 		LOG("Attack started!");
 
 		// Determine direction from WASD (use current input, allow diagonals)
@@ -412,6 +428,7 @@ void Player::Attack(float dt) {
 
 		attackRemaining = attackTotal;
 		attackActive = true;
+		attackCooldown = attackCooldownDuration; // Start cooldown
 
 		// Small immediate advance so triangle is clearly visible (optional)
 		float initialMove = std::min(2.0f, attackRemaining);
@@ -536,6 +553,40 @@ void Player::Draw(float dt) {
 				baseY,
 				&frame
 			);
+		}
+
+		// Draw dagger indicator if picked up
+		if (canAttack && daggerUITexture)
+		{
+			int daggerX = baseX + heartsToDraw * spacing + 16; // offset from hearts
+			int daggerY = baseY + 16;
+
+			Engine::GetInstance().render->DrawTexture(
+				daggerUITexture,
+				daggerX - daggerUITexW / 2,
+				daggerY - daggerUITexH / 2
+			);
+
+			// Draw cooldown indicator as white rectangle on dagger
+			if (attackCooldown > 0.0f)
+			{
+				float cooldownProgress = attackCooldown / attackCooldownDuration * -1;
+				int cooldownHeight = (int)(daggerUITexH * cooldownProgress);
+
+				SDL_Rect cooldownRect = {
+					(int)(daggerX - daggerUITexW / 2),
+					(int)(daggerY - daggerUITexH / 2) + 32,
+					daggerUITexW,
+					cooldownHeight
+				};
+
+				Engine::GetInstance().render->DrawRectangle(
+					cooldownRect,
+					255, 255, 255, 255,
+					true,
+					true
+				);
+			}
 		}
 	}
 
