@@ -126,15 +126,15 @@ public:
     int GetTileHeight() const;
     int GetWidth() const;
     int GetHeight() const;
-
-public: 
+ 
     std::string mapFileName;
     std::string mapPath;
 
 private:
 
+    void UnloadMapData();
+
     bool mapLoaded;
- 
     MapData mapData;
 
     SDL_Texture* helpTexture;        
