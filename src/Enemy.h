@@ -10,7 +10,18 @@
 enum class EnemyKind
 {
 	GROUND,   // tu slime actual
-	FLYING    // el nuevo enemigo volador
+	FLYING,    // el nuevo enemigo volador
+	BOSS       // El nuevo boss Cthulhu
+};
+
+enum class BossState
+{
+	IDLE,      // Not aware of player
+	COMBAT,    // Aware of player, deciding action
+	ATTACK_1,  // First attack pattern
+	ATTACK_2,  // Second attack pattern
+	FLYING,    // Flying/dodging
+	DEAD       // Death state
 };
 
 class Enemy : public Entity
@@ -29,6 +40,12 @@ public:
 
 	void SetPosition(int x, int y);
 	void MakeFlying(int frameW = 79, int frameH = 69);
+	void MakeBoss(); // Nueva funcion para crear al boss
+
+	bool IsBoss() const { return kind == EnemyKind::BOSS; }
+
+	// Handle being hit by an attack
+	void OnAttackHit();
 
 	// Check if enemy is hit by attack at given position and range
 	bool IsHitByAttack(float attackX, float attackY, float attackRange) const
@@ -138,4 +155,32 @@ private:
 	float slowdownTimer = 0.0f;
 	const float slowdownDuration = 1.0f; 
 	const float slowdownMultiplier = 0.3f; 
+
+	// --- Boss ---
+	int bossWidth = 192;
+	int bossHeight = 112;
+	bool bossHitThisFrame = false;
+	int bossHealth = 30;
+	const int bossMaxHealth = 30;
+	const int healthBarPixelsPerHealth = 6;
+	const int healthBarHeight = 8;
+	BossState bossState = BossState::IDLE;
+	BossState nextBossState = BossState::IDLE;
+	float stateTimer = 0.0f;
+	float stateTransitionTime = 0.0f;  // 3-5 seconds before entering action state
+	int playerDetectionRadiusTiles = 12;  // tiles to detect player
+	bool bossAwareOfPlayer = false;
+	float bossSpeed = 1.5f;  // pixels per second
+	int bossDirection = 1;  // 1 for right, -1 for left
+	float bossIdleMoveTimer = 0.0f;  // timer to change direction
+	float bossIdleMoveInterval = 3.0f;  // change direction every 3 seconds
+
+	// --- Boss Attack 1: Projectile ---
+	PhysBody* attack1Projectile = nullptr;  // physics body for the projectile
+	Vector2D attack1ProjectilePos;  // current position of projectile
+	Vector2D attack1ProjectileDir;  // direction of projectile (normalized)
+	float attack1ProjectileSpeed = 200.0f;  // pixels per second
+	float attack1ProjectileDistance = 0.0f;  // distance traveled so far
+	const float attack1ProjectileMaxDistance = 128.0f;  // 4 squares (4 * 32)
+	bool attack1Active = false;  // is attack 1 currently active
 };

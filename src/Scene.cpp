@@ -703,16 +703,16 @@ void Scene::LoadLevel(int level)
 
 	if (en)
 	{
-		// IMPORTANTE: ponlo cerca del origen/cámara para verlo seguro
-		int spawnX = 200;
-		int spawnY = 100;
+		// Spawn boss at position (1480, 650)
+		int spawnX = 1480;
+		int spawnY = 650;
 
 		en->SetPosition(spawnX, spawnY);
 
-		// Lo convertimos a volador (frame size de tu sprite)
-		en->MakeFlying(79, 69);
+		// Convert to boss type
+		en->MakeBoss();
 
-		LOG("Spawned Flying Enemy at %d, %d", spawnX, spawnY);
+		LOG("Spawned Boss (Cthulhu) at %d, %d", spawnX, spawnY);
 	}
 
 	// --- Spawn dagger at Level 1 ---

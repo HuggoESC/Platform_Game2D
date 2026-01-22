@@ -346,9 +346,19 @@ void Player::Attack(float dt) {
 					float dist = std::sqrt(dx * dx + dy * dy);
 					LOG("Enemy at (%.1f, %.1f), distance: %.1f", ex, ey, dist);
 					
-					if (enemy->IsHitByAttack(attackPos.getX(), attackPos.getY(), attackHitRange)) {
-						LOG("ENEMY HIT! Destroying enemy!");
-						// Defer destruction until after the loop completes
+					// Boss has extended hit range of 100 pixels
+					if (enemy->IsBoss())
+					{
+						if (dist <= 100.0f)
+						{
+							LOG("Boss hit! Reducing health...");
+							enemy->OnAttackHit();
+						}
+					}
+					// Regular enemies have hit range of 20 pixels
+					else if (dist <= 20.0f && enemy->IsHitByAttack(attackPos.getX(), attackPos.getY(), attackHitRange))
+					{
+						LOG("ENEMY HIT!");
 						enemiesToDestroy.push_back(entity);
 					}
 				}
@@ -487,7 +497,7 @@ void Player::Draw(float dt) {
 
 	// Draw attack triangle (white) if active
 	if (attackActive) {
-		// tip at attackPos, base behind tip by attackLength
+		// tip at attackPos, base behind tip by attackPos.getX() - ex
 		float tx = attackPos.getX();
 		float ty = attackPos.getY();
 
@@ -684,8 +694,35 @@ void Player::OnCollision(PhysBody* physA, PhysBody* physB) {
 	}
 
 	case ColliderType::UNKNOWN:
-		LOG("Collision UNKNOWN");
+	{
+		// Boss projectile - damage player
+		if (invulnerable) break;
+
+		LOG("Collision BOSS PROJECTILE - Damage!");
+
+		// Activar invulnerabilidad + parpadeo
+		invulnerable = true;
+		invulnTimer = invulnDuration;
+		blinkTimer = blinkInterval;
+		blinkVisible = true;
+
+		// Quitar 1/4 de corazón
+		hp -= 1;
+		if (hp < 0) hp = 0;
+		UpdateLifeAnimation();
+
+		// Knockback opcional (para que se note el golpe)
+		float kx = facingLeft ? 2.5f : -2.5f;
+		Engine::GetInstance().physics->ApplyLinearImpulseToCenter(pbody, kx, -0.2f, true);
+
+		// Si te quedas sin vida -> GameOver
+		if (hp <= 0)
+		{
+			Engine::GetInstance().scene->TriggerGameOver();
+		}
+
 		break;
+	}
 
 	default:
 		break;

@@ -20,7 +20,7 @@ Enemy::Enemy(int x, int y)
 {
  type = EntityType::ENEMY;
 
- // Posición inicial lógica
+ // Posición initial lógica
  position.setX((float)x);
  position.setY((float)y);
 
@@ -171,6 +171,358 @@ bool Enemy::Update(float dt)
         listenersSet = true;
     }
 
+    if (kind == EnemyKind::BOSS)
+    {
+        // Update position from physics body if it exists
+        if (pbody)
+        {
+            int px, py;
+            pbody->GetPosition(px, py);
+            position.setX((float)px);
+            position.setY((float)py);
+        }
+
+        const float dtSec = dt / 1000.0f;  // Convert ms to seconds
+        int bx = (int)position.getX();
+        int by = (int)position.getY();
+
+        // Update state timer
+        stateTimer += dtSec;
+
+        // --- PLAYER DETECTION (when in IDLE or COMBAT) ---
+        if (bossState == BossState::IDLE || bossState == BossState::COMBAT)
+        {
+            Map* map = Engine::GetInstance().map.get();
+            int bossRow = 0, bossCol = 0;
+            map->WorldToMap(bx, by, bossRow, bossCol);
+
+            int playerRow = -1, playerCol = -1;
+            bossAwareOfPlayer = FindPlayerInRadius(bossRow, bossCol, map, playerDetectionRadiusTiles, playerRow, playerCol);
+
+            // Transition from IDLE to COMBAT when player detected
+            if (bossAwareOfPlayer && bossState == BossState::IDLE)
+            {
+                bossState = BossState::COMBAT;
+                stateTimer = 0.0f;
+                LOG("CTHULHU COMBAT");
+            }
+        }
+
+        // --- IDLE STATE: Move left and right ---
+        if (bossState == BossState::IDLE)
+        {
+            // Update move timer
+            bossIdleMoveTimer += dtSec;
+
+            // Change direction every N seconds
+            if (bossIdleMoveTimer >= bossIdleMoveInterval)
+            {
+                bossIdleMoveTimer = 0.0f;
+                bossDirection *= -1;  // Flip direction
+            }
+
+            // Move the boss using physics velocity (like the slime does)
+            Engine::GetInstance().physics->SetXVelocity(pbody, bossDirection * bossSpeed);
+        }
+        else
+        {
+            // Stop moving when not in IDLE
+            Engine::GetInstance().physics->SetXVelocity(pbody, 0.0f);
+        }
+
+        // --- COMBAT STATE: Wait 3-5 seconds, then choose an attack ---
+        if (bossState == BossState::COMBAT)
+        {
+            // First time in combat, decide transition time
+            if (stateTransitionTime == 0.0f)
+            {
+                std::uniform_real_distribution<float> timeDist(3.0f, 5.0f);
+                stateTransitionTime = timeDist(rng);
+            }
+
+            // Wait for transition time
+            if (stateTimer >= stateTransitionTime)
+            {
+                // Choose random attack (1-3)
+                std::uniform_int_distribution<int> actionDist(1, 3);
+                int chosenAction = actionDist(rng);
+
+                if (chosenAction == 1)
+                {
+                    bossState = BossState::ATTACK_1;
+                    LOG("CTHULHU ATTACKS 1");
+                }
+                else if (chosenAction == 2)
+                {
+                    bossState = BossState::ATTACK_2;
+                    LOG("CTHULHU ATTACKS 2");
+                }
+                else
+                {
+                    bossState = BossState::FLYING;
+                    LOG("CTHULHU FLIES");
+                }
+
+                stateTimer = 0.0f;
+                stateTransitionTime = 0.0f;  // Reset for next combat phase
+            }
+        }
+
+        // --- ATTACK STATES (placeholder for now) ---
+        // These will be implemented later with actual attack patterns
+        if (bossState == BossState::ATTACK_1)
+        {
+            // Initialize attack on first frame - use a flag to track if we've initialized
+            static bool attack1Initialized = false;
+            if (!attack1Initialized)
+            {
+                attack1Initialized = true;
+                attack1Active = true;
+                attack1ProjectileDistance = 0.0f;
+
+                // Get player position for direction
+                Vector2D playerPos = Vector2D(0.0f, 0.0f);
+                for (const auto& entPtr : Engine::GetInstance().entityManager->entities)
+                {
+                    if (entPtr && entPtr->type == EntityType::PLAYER)
+                    {
+                        playerPos = entPtr->position;
+                        break;
+                    }
+                }
+
+                // Calculate direction (only horizontal)
+                Vector2D bossToPlayer = Vector2D(playerPos.getX() - bx, 0.0f);
+                float len = sqrtf(bossToPlayer.getX() * bossToPlayer.getX());
+                if (len > 0.0f)
+                {
+                    attack1ProjectileDir.setX(bossToPlayer.getX() / len);
+                    attack1ProjectileDir.setY(0.0f);
+                }
+                else
+                {
+                    // Default to boss direction if no player found
+                    attack1ProjectileDir.setX((float)bossDirection);
+                    attack1ProjectileDir.setY(0.0f);
+                }
+
+                // Spawn projectile in the middle of the boss
+                attack1ProjectilePos.setX((float)bx);
+                attack1ProjectilePos.setY((float)by);
+
+                // Create a sensor rectangle for the projectile (doesn't collide with world)
+                // Make it bigger: 48x48 instead of 32x32
+                int projW = 48;  // projectile width (bigger)
+                int projH = 48;  // projectile height (bigger)
+                attack1Projectile = Engine::GetInstance().physics->CreateRectangleSensor(
+                    (int)attack1ProjectilePos.getX(),
+                    (int)attack1ProjectilePos.getY(),
+                    projW,
+                    projH,
+                    KINEMATIC  // kinematic body - we control it
+                );
+                attack1Projectile->ctype = ColliderType::UNKNOWN;  // don't collide with normal stuff
+                attack1Projectile->listener = shared_from_this();
+
+                LOG("ATTACK 1: Projectile spawned at (%.0f, %.0f), direction (%.2f, %.2f)", 
+                    attack1ProjectilePos.getX(), attack1ProjectilePos.getY(),
+                    attack1ProjectileDir.getX(), attack1ProjectileDir.getY());
+            }
+
+            // Update projectile movement
+            if (attack1Active && attack1Projectile != nullptr)
+            {
+                float moveAmount = attack1ProjectileSpeed * dtSec;
+                attack1ProjectileDistance += moveAmount;
+
+                // Move projectile
+                attack1ProjectilePos.setX(attack1ProjectilePos.getX() + attack1ProjectileDir.getX() * moveAmount);
+                attack1ProjectilePos.setY(attack1ProjectilePos.getY() + attack1ProjectileDir.getY() * moveAmount);
+
+                // Update physics body position
+                attack1Projectile->SetPosition(
+                    (int)attack1ProjectilePos.getX(),
+                    (int)attack1ProjectilePos.getY()
+                );
+
+                // Draw the projectile as a yellow rectangle (bigger: 48x48)
+                SDL_Rect projRect = {
+                    (int)attack1ProjectilePos.getX() - 24,
+                    (int)attack1ProjectilePos.getY() - 24,
+                    48,
+                    48
+                };
+                Engine::GetInstance().render->DrawRectangle(projRect, 255, 255, 0, 200, true, true);
+
+                // Check collision with player manually
+                bool hitPlayer = false;
+                for (const auto& entPtr : Engine::GetInstance().entityManager->entities)
+                {
+                    if (entPtr && entPtr->type == EntityType::PLAYER)
+                    {
+                        Vector2D playerPos = entPtr->position;
+                        float dx = attack1ProjectilePos.getX() - playerPos.getX();
+                        float dy = attack1ProjectilePos.getY() - playerPos.getY();
+                        float dist = sqrtf(dx * dx + dy * dy);
+
+                        // Hit range of ~40 pixels for player collision (bigger projectile)
+                        if (dist <= 40.0f)
+                        {
+                            LOG("ATTACK 1: Hit player!");
+                            hitPlayer = true;
+                            attack1ProjectileDistance = attack1ProjectileMaxDistance + 32.0f;  // End attack (travel 32 pixels further)
+                        }
+                        break;
+                    }
+                }
+
+                // Check if projectile has traveled max distance
+                if (attack1ProjectileDistance >= (attack1ProjectileMaxDistance + 32.0f))
+                {
+                    LOG("ATTACK 1: Projectile disappeared after traveling 160 pixels");
+                    attack1Active = false;
+
+                    // Clean up projectile
+                    if (attack1Projectile)
+                    {
+                        Engine::GetInstance().physics->DeletePhysBody(attack1Projectile);
+                        attack1Projectile = nullptr;
+                    }
+                }
+            }
+
+            // After attack finishes, return to combat
+            if (!attack1Active && stateTimer > 0.5f)
+            {
+                bossState = BossState::COMBAT;
+                stateTimer = 0.0f;
+                stateTransitionTime = 0.0f;
+                attack1Initialized = false;  // Reset for next attack
+                LOG("CTHULHU COMBAT");
+            }
+        }
+
+        if (bossState == BossState::ATTACK_2)
+        {
+            // Initialize attack on first frame
+            static bool attack2Initialized = false;
+            if (!attack2Initialized)
+            {
+                attack2Initialized = true;
+                LOG("ATTACK 2: Spawning minions!");
+
+                // Spawn position: in front of boss based on direction
+                int spawnOffsetX = 100 * bossDirection; // 100 pixels in front
+                int spawnX = bx + spawnOffsetX;
+                int spawnY = by;
+
+                // Check if there's space to spawn enemies (basic bounds check)
+                Map* map = Engine::GetInstance().map.get();
+                int mapWidth = map->GetWidth() * map->GetTileWidth();
+                
+                if (spawnX > 0 && spawnX < mapWidth)
+                {
+                    // Spawn a slime enemy
+                    auto slime = std::make_shared<Enemy>(spawnX, spawnY);
+                    Engine::GetInstance().entityManager->AddEntity(slime);
+                    LOG("ATTACK 2: Slime spawned at (%.0f, %.0f)", (float)spawnX, (float)spawnY);
+
+                    // Spawn a flying enemy
+                    auto flyer = std::make_shared<Enemy>(spawnX + 50, spawnY - 50); // offset flying enemy
+                    flyer->MakeFlying();
+                    Engine::GetInstance().entityManager->AddEntity(flyer);
+                    LOG("ATTACK 2: Flying enemy spawned at (%.0f, %.0f)", (float)(spawnX + 50), (float)(spawnY - 50));
+                }
+                else
+                {
+                    LOG("ATTACK 2: Not enough space to spawn minions");
+                }
+            }
+
+            // After a duration, return to COMBAT
+            if (stateTimer > 1.0f)
+            {
+                bossState = BossState::COMBAT;
+                stateTimer = 0.0f;
+                stateTransitionTime = 0.0f;
+                attack2Initialized = false;  // Reset for next attack
+                LOG("CTHULHU COMBAT");
+            }
+        }
+
+        if (bossState == BossState::FLYING)
+        {
+            // TODO: Implement flying/dodging behavior
+            // For now, after a duration, return to COMBAT
+            if (stateTimer > 2.0f)
+            {
+                bossState = BossState::COMBAT;
+                stateTimer = 0.0f;
+                stateTransitionTime = 0.0f;
+                LOG("CTHULHU COMBAT");
+            }
+        }
+
+        // --- DEATH STATE ---
+        if (bossHealth <= 0 && bossState != BossState::DEAD)
+        {
+            bossState = BossState::DEAD;
+            LOG("CTHULHU DIES");
+        }
+
+        // --- DRAW BOSS ---
+        // Update position from physics body before drawing
+        if (pbody)
+        {
+            pbody->GetPosition(bx, by);
+        }
+
+        // Draw the 192x112 rectangle centered at position
+        SDL_Rect bossRect = {
+            bx - bossWidth / 2,
+            by - bossHeight / 2,
+            bossWidth,
+            bossHeight
+        };
+
+        // Draw filled rectangle with semi-transparent red
+        Engine::GetInstance().render->DrawRectangle(bossRect, 200, 50, 50, 200, true, true);
+        // Draw border
+        Engine::GetInstance().render->DrawRectangle(bossRect, 255, 0, 0, 255, false, true);
+
+        // Draw health bar
+        // Position: 64 pixels upwards and 92 pixels to the left from middle of hitbox
+        int healthBarX = bx - 92;
+        int healthBarY = by - 64;
+
+        // Health bar width based on current health
+        int healthBarWidth = bossHealth * healthBarPixelsPerHealth;
+
+        SDL_Rect healthBar = {
+            healthBarX,
+            healthBarY,
+            healthBarWidth,
+            healthBarHeight
+        };
+
+        // Draw health bar background (dark red)
+        SDL_Rect healthBarBG = {
+            healthBarX,
+            healthBarY,
+            bossMaxHealth * healthBarPixelsPerHealth,
+            healthBarHeight
+        };
+        Engine::GetInstance().render->DrawRectangle(healthBarBG, 50, 20, 20, 255, true, true);
+
+        // Draw health bar foreground (green)
+        Engine::GetInstance().render->DrawRectangle(healthBar, 0, 255, 0, 255, true, true);
+
+        // Draw health bar border
+        Engine::GetInstance().render->DrawRectangle(healthBarBG, 255, 255, 255, 255, false, true);
+
+        return true;
+    }
+
     if (kind == EnemyKind::FLYING)
     {
         // dt llega en MILISEGUNDOS en tu proyecto -> lo pasamos a segundos
@@ -231,7 +583,7 @@ bool Enemy::Update(float dt)
         float vx = 0.0f;
         float vy = (targetYM - yM) * 3.0f;
 
-        // Si hay jugador, perseguir si está en rango
+        // Si hay jugador, persecución si está en rango
         if (hasPlayer)
         {
             // flyAggroRange está en PÍXELES -> a METROS
@@ -454,13 +806,37 @@ bool Enemy::Update(float dt)
 // Collision handling
 void Enemy::OnCollision(PhysBody* physA, PhysBody* physB)
 {
- // Consideramos sólido todo lo que no sea jugador, sensor o desconocido
- bool bloqueSolido =
- physB->ctype != ColliderType::PLAYER &&
- physB->ctype != ColliderType::SENSOR &&
- physB->ctype != ColliderType::UNKNOWN;
+	// Ignore collisions between slimes/minions and other enemies (but NOT boss-to-enemy)
+	// The boss (which is also ENEMY type) should collide with platforms but not minions
+	if (physA->ctype == ColliderType::ENEMY && physB->ctype == ColliderType::ENEMY)
+	{
+		// Only filter if BOTH are regular enemies (not boss)
+		// Boss will be checked below with kind == BOSS
+		if (kind != EnemyKind::BOSS && physB->listener.lock() && 
+		    dynamic_cast<Enemy*>(physB->listener.lock().get()) &&
+		    dynamic_cast<Enemy*>(physB->listener.lock().get())->IsBoss() == false)
+		{
+			// Regular enemy colliding with another regular enemy - ignore
+			return;
+		}
+	}
 
- // Solo nos interesa cuándo el QUE choca es el cuerpo del slime
+	// Boss collision with attacks - ONLY take damage from PLAYER attacks (not own projectiles)
+	// Note: Damage is handled through OnAttackHit() in Player.cpp, NOT through collision
+	if (kind == EnemyKind::BOSS && physB->ctype == ColliderType::PLAYER)
+	{
+		// Boss damage is handled elsewhere, not here
+		return;
+	}
+
+	// Consideramos sólido todo lo que no sea jugador, sensor o desconocido
+	bool bloqueSolido =
+	physB->ctype != ColliderType::PLAYER &&
+	physB->ctype != ColliderType::SENSOR &&
+	physB->ctype != ColliderType::UNKNOWN &&
+	physB->ctype != ColliderType::ENEMY;
+
+	// Solo nos interesa cuándo el QUE choca es el cuerpo del slime
  if (physA == pbody && bloqueSolido)
  {
  direction *= -1; // invertimos dirección
@@ -612,8 +988,73 @@ void Enemy::MakeFlying(int frameW, int frameH)
     LOG("Enemy convertido a FLYING con %d frames, flyBaseY initialized to %.2f meters", (int)flyIdleAnim.frames.size(), flyBaseY);
 }
 
+void Enemy::MakeBoss()
+{
+	kind = EnemyKind::BOSS;
+
+	// Create a rectangle hitbox for the boss
+	int bx, by;
+	if (pbody)
+	{
+		pbody->GetPosition(bx, by);
+		Engine::GetInstance().physics->DeletePhysBody(pbody);
+		pbody = nullptr;
+	}
+	else
+	{
+		bx = (int)position.getX();
+		by = (int)position.getY();
+	}
+
+	// Create boss as a regular body that collides with ground but not other enemies
+	// Use CreateRectangle (not sensor) so it respects gravity and collides with platforms
+	pbody = Engine::GetInstance().physics->CreateRectangle(
+		bx, by,
+		bossWidth,
+		bossHeight,
+		DYNAMIC
+	);
+	pbody->ctype = ColliderType::ENEMY;
+	pbody->listener = shared_from_this();
+
+	// Keep gravity enabled and fixed rotation
+	b2Body_SetFixedRotation(pbody->body, true);
+
+	// Remove old sensors if they exist
+	if (sensorFront)
+	{
+		Engine::GetInstance().physics->DeletePhysBody(sensorFront);
+		sensorFront = nullptr;
+	}
+	if (sensorBack)
+	{
+		Engine::GetInstance().physics->DeletePhysBody(sensorBack);
+		sensorBack = nullptr;
+	}
+
+	LOG("Boss created at position (%.0f, %.0f) with hitbox %dx%d", position.getX(), position.getY(), bossWidth, bossHeight);
+}
+
+void Enemy::OnAttackHit()
+{
+	if (kind == EnemyKind::BOSS)
+	{
+		LOG("CTHULHU HIT!");
+		bossHealth--;
+		if (bossHealth < 0) bossHealth = 0;
+		LOG("Boss health: %d / %d", bossHealth, bossMaxHealth);
+	}
+}
+
 bool Enemy::CleanUp()
 {
+    // Clean up attack 1 projectile if it exists
+    if (attack1Projectile)
+    {
+        Engine::GetInstance().physics->DeletePhysBody(attack1Projectile);
+        attack1Projectile = nullptr;
+    }
+
     // Evita callbacks a memoria liberada
     if (pbody)
     {
